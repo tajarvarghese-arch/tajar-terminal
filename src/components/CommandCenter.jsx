@@ -234,8 +234,8 @@ export default function CommandCenter({ onOpenHogan }) {
       {/* ---------- TOP BAR ---------- */}
       <header className="term-bar">
         <div className="bar-brand">
-          <b>HOGAN&nbsp;TERMINAL</b>
-          <span>TAJAR OS</span>
+          <b>TAJAR&nbsp;TERMINAL</b>
+          <span>PERSONAL DESK</span>
         </div>
         <div className="bar-stats">
           <div className="bar-stat">
