@@ -265,6 +265,7 @@ export default function CommandCenter() {
   const [logEntries, setLogEntries] = useState(() => load(K.log, []))
   const [logDraft, setLogDraft] = useState('')
   const [wire, setWire] = useState([])
+  const [vitals, setVitals] = useState(null)
   const [syncKey, setSyncKey] = useState(() => loadStr(K.syncKey, ''))
   const [syncStatus, setSyncStatus] = useState('off') // off | ok | err
   const [editSync, setEditSync] = useState(false)
@@ -382,6 +383,23 @@ export default function CommandCenter() {
     try { localStorage.setItem(K.syncKey, JSON.stringify(k)) } catch {}
     setSyncKey(k)
   }
+
+  /* vitals — daily Apple Health stats posted by an iOS Shortcut to /api/health */
+  useEffect(() => {
+    if (!syncKey) { setVitals(null); return }
+    let alive = true
+    async function pull() {
+      try {
+        const res = await fetch('/api/health', { headers: { 'x-sync-key': syncKey } })
+        if (!res.ok) throw new Error('no health api')
+        const body = await res.json()
+        if (alive && body?.days) setVitals(body.days)
+      } catch { /* strip simply stays hidden */ }
+    }
+    pull()
+    const id = setInterval(pull, 1800000)
+    return () => { alive = false; clearInterval(id) }
+  }, [syncKey])
 
   /* weather — Open-Meteo direct from the browser, refreshed every 15 min */
   useEffect(() => {
@@ -660,6 +678,23 @@ export default function CommandCenter() {
               <span><u>SUN</u><b>{wx.sunrise}–{wx.sunset}</b></span>
             </div>
           )}
+
+          {(() => {
+            if (!vitals) return null
+            const ydaISO = isoOf(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1))
+            const t = vitals[todayISO]
+            const y = vitals[ydaISO]
+            if (!t && !y) return null
+            return (
+              <div className="wx-strip vitals-strip">
+                <span><u>VITALS</u><b className="vit-src">HEALTH</b></span>
+                {t?.steps != null && <span><u>STEPS</u><b>{t.steps.toLocaleString()}</b></span>}
+                {t?.exercise != null && <span><u>EXERCISE</u><b>{t.exercise} MIN</b></span>}
+                {y?.steps != null && <span><u>YDA STEPS</u><b className="muted">{y.steps.toLocaleString()}</b></span>}
+                {y?.exercise != null && <span><u>YDA EX</u><b className="muted">{y.exercise} MIN</b></span>}
+              </div>
+            )
+          })()}
 
           <div className="agenda">
             {seedSchedule.length === 0 && <div className="agenda-empty">No commitments today. Clear board.</div>}

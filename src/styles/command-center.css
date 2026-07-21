@@ -585,6 +585,9 @@ td.fd { animation: flashDown 0.9s ease-out; }
 }
 .wx-strip u { text-decoration: none; color: var(--dim); font-size: 8.5px; letter-spacing: 1.2px; }
 .wx-strip b { font-size: 12px; font-weight: 700; letter-spacing: 0.5px; }
+.vitals-strip { border-top: 0; }
+.vitals-strip .vit-src { color: var(--amber); }
+.vitals-strip b.muted { color: var(--dim); }
 
 /* ---------- HORIZON ---------- */
 .horizon-list { display: flex; flex-direction: column; }
