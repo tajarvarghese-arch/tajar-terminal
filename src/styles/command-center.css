@@ -598,6 +598,10 @@ td.fd { animation: flashDown 0.9s ease-out; }
 }
 .wx-strip u { text-decoration: none; color: var(--dim); font-size: 8.5px; letter-spacing: 1.2px; }
 .wx-strip b { font-size: 12px; font-weight: 700; letter-spacing: 0.5px; }
+.wx-strip b i { font-style: normal; color: var(--dim); font-weight: 400; font-size: 10px; }
+.wx-strip .tide-hi { color: var(--up); }
+.wx-strip .tide-lo { color: var(--amber); }
+
 .vitals-strip { border-top: 0; }
 .vitals-strip .vit-src { color: var(--amber); }
 .vitals-strip b.muted { color: var(--dim); }

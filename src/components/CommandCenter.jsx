@@ -55,6 +55,13 @@ const WX_URL =
   `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,weather_code` +
   `&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America%2FNew_York&forecast_days=5`
 
+/* NOAA tide predictions — Cos Cob Harbor, Greenwich CT (no key, CORS-open) */
+const TIDE_STATION = '8469549'
+const tideURL = (from, to) =>
+  `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?product=predictions&datum=MLLW` +
+  `&station=${TIDE_STATION}&time_zone=lst_ldt&units=english&interval=hilo&format=json` +
+  `&begin_date=${from}&end_date=${to}`
+
 /* WMO weather codes -> terse terminal labels */
 const WMO = [
   [0, 'CLEAR'], [1, 'MOSTLY CLEAR'], [2, 'PARTLY CLOUDY'], [3, 'OVERCAST'],
@@ -307,6 +314,7 @@ export default function CommandCenter() {
   const [reasons, setReasons] = useState(() => load(K.reasons, seedReasons))
   const [reasonDraft, setReasonDraft] = useState('')
   const [wx, setWx] = useState(null)
+  const [tides, setTides] = useState([])
   const [streaks, setStreaks] = useState(() => load(K.streaks, seedStreaks))
   const [habitDraft, setHabitDraft] = useState('')
   const [logEntries, setLogEntries] = useState(() => load(K.log, []))
@@ -447,6 +455,43 @@ export default function CommandCenter() {
     const id = setInterval(pull, 300000)
     return () => { alive = false; clearInterval(id) }
   }, [syncKey])
+
+  /* tides — NOAA Cos Cob Harbor, refreshed every 6 h (predictions are static) */
+  useEffect(() => {
+    let alive = true
+    async function pull() {
+      try {
+        const fmt = (d) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(d).replace(/-/g, '')
+        const today = new Date()
+        const tomorrow = new Date(today.getTime() + 86400000)
+        const res = await fetch(tideURL(fmt(today), fmt(tomorrow)))
+        if (!res.ok) throw new Error('tides')
+        const d = await res.json()
+        if (alive && Array.isArray(d?.predictions)) {
+          setTides(d.predictions.map((p) => ({
+            when: new Date(p.t.replace(' ', 'T')),
+            ft: Number(p.v),
+            type: p.type,
+          })))
+        }
+      } catch { /* strip cells simply stay hidden */ }
+    }
+    pull()
+    const id = setInterval(pull, 21600000)
+    return () => { alive = false; clearInterval(id) }
+  }, [])
+
+  /* next high / low tide relative to now */
+  const nextTide = useMemo(() => {
+    const upcoming = tides.filter((t) => t.when > now)
+    const hm = (d) => new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }).format(d)
+    const h = upcoming.find((t) => t.type === 'H')
+    const l = upcoming.find((t) => t.type === 'L')
+    return {
+      high: h ? { at: hm(h.when), ft: h.ft.toFixed(1), tmrw: h.when.getDate() !== now.getDate() } : null,
+      low: l ? { at: hm(l.when), ft: l.ft.toFixed(1), tmrw: l.when.getDate() !== now.getDate() } : null,
+    }
+  }, [tides, now])
 
   /* weather — Open-Meteo direct from the browser, refreshed every 15 min */
   useEffect(() => {
@@ -750,6 +795,18 @@ export default function CommandCenter() {
               <span><u>PRECIP</u><b>{wx.precip}%</b></span>
               <span><u>WIND</u><b>{wx.wind} MPH</b></span>
               <span><u>SUN</u><b>{wx.sunrise}–{wx.sunset}</b></span>
+              {nextTide.high && (
+                <span title={`Next high tide · Cos Cob Harbor · ${nextTide.high.ft} ft`}>
+                  <u>HIGH TIDE</u>
+                  <b className="tide-hi">▲ {nextTide.high.at}{nextTide.high.tmrw ? '+1' : ''} <i>{nextTide.high.ft}FT</i></b>
+                </span>
+              )}
+              {nextTide.low && (
+                <span title={`Next low tide · Cos Cob Harbor · ${nextTide.low.ft} ft`}>
+                  <u>LOW TIDE</u>
+                  <b className="tide-lo">▼ {nextTide.low.at}{nextTide.low.tmrw ? '+1' : ''} <i>{nextTide.low.ft}FT</i></b>
+                </span>
+              )}
             </div>
           )}
 
