@@ -327,11 +327,36 @@ export default function CommandCenter() {
   const [syncDraft, setSyncDraft] = useState('')
   const applyingRef = useRef(false)
   const pushTimer = useRef(null)
+  const tapeRef = useRef(null)
 
   /* clock */
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(t)
+  }, [])
+
+  /* wire tape scroll — rAF-driven so iOS can't drop the animated layer.
+     Width is measured live each frame; wraps at the exact halfway point. */
+  useEffect(() => {
+    let raf
+    let offset = 0
+    let last = performance.now()
+    const SPEED = 42 // px/s
+    const step = (t) => {
+      const el = tapeRef.current
+      if (el) {
+        const half = el.scrollWidth / 2
+        const dt = Math.min(0.1, (t - last) / 1000) // clamp resume-from-background jumps
+        if (half > 0) {
+          offset = (offset + SPEED * dt) % half
+          el.style.transform = `translate3d(${-offset}px,0,0)`
+        }
+      }
+      last = t
+      raf = requestAnimationFrame(step)
+    }
+    raf = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(raf)
   }, [])
 
   /* persistence */
@@ -718,7 +743,7 @@ export default function CommandCenter() {
 
       {/* ---------- WIRE TAPE ---------- */}
       <div className="tape" aria-hidden="true">
-        <div className="tape-track">
+        <div className="tape-track" ref={tapeRef}>
           {[0, 1].map((rep) => (
             <span key={rep}>
               {wx && (

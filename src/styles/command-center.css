@@ -190,14 +190,12 @@
   white-space: nowrap;
   position: relative;
 }
+/* transform driven by a rAF loop in the component — no CSS animation,
+   no will-change: both invite iOS Safari to drop the painted layer */
 .tape-track {
   display: inline-block;
   padding: 7px 0;
-  animation: scroll 90s linear infinite;
-  will-change: transform;
 }
-.tape:hover .tape-track { animation-play-state: paused; }
-@keyframes scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 .tape-item {
   display: inline-flex;
   align-items: baseline;
