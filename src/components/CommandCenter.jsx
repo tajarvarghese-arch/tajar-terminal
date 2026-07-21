@@ -101,7 +101,7 @@ const seedWeek = [
 const seedStreaks = {
   habits: [
     { id: 'piano', name: 'PIANO' },
-    { id: 'hogan', name: 'HOGAN' },
+    { id: 'golf', name: 'GOLF' },
     { id: 'move', name: 'WORKOUT' },
     { id: 'meeting', name: 'MEETING' },
   ],
@@ -189,7 +189,7 @@ function marketState(now) {
   return { open, label: open ? 'MKT OPEN' : weekday ? (mins < 570 ? 'PRE-MKT' : 'AFT-MKT') : 'MKT CLOSED' }
 }
 
-export default function CommandCenter({ onOpenHogan }) {
+export default function CommandCenter() {
   const [now, setNow] = useState(() => new Date())
 
   /* portfolio (demoted) */
@@ -771,7 +771,7 @@ export default function CommandCenter({ onOpenHogan }) {
         <span className="data-note">
           PRIVATE · STORED ON THIS DEVICE · QUOTES {live ? 'LIVE (YAHOO)' : 'SNAPSHOT'}
         </span>
-        <button onClick={onOpenHogan}>OPEN HOGAN COACH &#8599;</button>
+        <span className="data-note">TAJAR TERMINAL</span>
       </footer>
     </div>
   )
