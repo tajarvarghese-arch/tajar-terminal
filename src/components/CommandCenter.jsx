@@ -467,6 +467,7 @@ export default function CommandCenter() {
       {/* ---------- MASTHEAD ---------- */}
       <header className="term-bar">
         <div className="bar-brand">
+          <span className="glyph" aria-hidden="true">&gt;<i /></span>
           <b>TAJAR&nbsp;TERMINAL</b>
           <span>PERSONAL DESK</span>
         </div>
@@ -556,9 +557,9 @@ export default function CommandCenter() {
                 <button onClick={saveFocus}>SET</button>
               </div>
             ) : focus ? (
-              <h1 onClick={openFocusEdit}>{focus}</h1>
+              <h1 onClick={openFocusEdit}>{focus}<span className="cursor" aria-hidden="true" /></h1>
             ) : (
-              <h1 className="empty" onClick={openFocusEdit}>Tap to set today&rsquo;s one focus &rarr;</h1>
+              <h1 className="empty" onClick={openFocusEdit}>Tap to set today&rsquo;s one focus<span className="cursor" aria-hidden="true" /></h1>
             )}
           </div>
 
