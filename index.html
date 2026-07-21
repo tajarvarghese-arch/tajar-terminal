@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="TAJAR" />
@@ -22,7 +22,14 @@
     <title>TAJAR TERMINAL</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      html, body, #root { width: 100%; height: 100%; overflow: hidden; }
+      html, body, #root { width: 100%; }
+      body {
+        overflow-x: hidden;
+        /* stop iOS Safari from auto-inflating text in wide containers (tape headlines) */
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+        -webkit-tap-highlight-color: transparent;
+      }
       /* Consolas on Windows/Mac; Inconsolata web-fallback keeps the same look on iPhone (no Consolas on iOS). */
       body {
         background: #0a0908;
