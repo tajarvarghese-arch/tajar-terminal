@@ -2,11 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import '../styles/command-center.css'
 
 /* ============================================================
-   SEED DATA — pulled live from the connected brokerage account.
-   qty is signed (negative = short). prevClose lets us compute the
-   day move client-side. The scheduled agent refreshes these values;
-   /api/quote overwrites `last` with live Yahoo quotes between refreshes.
+   TAJAR TERMINAL — a life terminal in a brutalist Bloomberg skin.
+   Order of attention: TODAY -> HORIZON -> SOBRIETY -> GROUNDING -> MARKETS.
+   All personal data lives in localStorage on this device only.
    ============================================================ */
+
+/* ---------- PORTFOLIO SEED (demoted to a strip) ---------- */
+/* Positions pulled from the connected brokerage; live quotes via /api/quote. */
 const seedBook = [
   { sym: 'AAPL', name: 'APPLE',            yh: 'AAPL', qty: -1500,  avg: 160.7906,    last: 327.980011,  prevClose: 326.590000 },
   { sym: 'BSX',  name: 'BOSTON SCIENTIFIC',yh: 'BSX',  qty: 3416,   avg: 73.175,      last: 43.159999,   prevClose: 43.769999 },
@@ -25,71 +27,196 @@ const seedBook = [
   { sym: 'SNDK', name: 'SANDISK',          yh: 'SNDK', qty: -62,    avg: 2275.808871, last: 1574.310059, prevClose: 1390.950000 },
   { sym: 'UNH',  name: 'UNITEDHEALTH',     yh: 'UNH',  qty: 15834,  avg: 294.204548,  last: 434.989990,  prevClose: 421.550000 },
 ]
-
-const cashValue = 5074524.17
 const netLiqSeed = 9672143.19
+const symbolsParam = seedBook.map((p) => p.yh).join(',')
+
+/* ---------- storage keys ---------- */
+const K = {
+  sober: 'tajar-sober-start',
+  focus: 'tajar-focus',
+  todos: 'tajar-today-todos',
+  horizon: 'tajar-horizon',
+  reasons: 'tajar-reasons',
+  mkt: 'tajar-markets-open',
+  streaks: 'tajar-streaks',
+  log: 'tajar-captains-log',
+}
+
+const DEFAULT_SOBER = '2025-10-09'
+
+/* ---------- weather (Open-Meteo, no key, CORS-open) ---------- */
+const WX_LAT = 41.0262   // Greenwich, CT
+const WX_LON = -73.6282
+const WX_URL =
+  `https://api.open-meteo.com/v1/forecast?latitude=${WX_LAT}&longitude=${WX_LON}` +
+  `&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m` +
+  `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset` +
+  `&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America%2FNew_York&forecast_days=1`
+
+/* WMO weather codes -> terse terminal labels */
+const WMO = [
+  [0, 'CLEAR'], [1, 'MOSTLY CLEAR'], [2, 'PARTLY CLOUDY'], [3, 'OVERCAST'],
+  [48, 'FOG'], [55, 'DRIZZLE'], [57, 'FRZ DRIZZLE'], [65, 'RAIN'], [67, 'FRZ RAIN'],
+  [77, 'SNOW'], [82, 'SHOWERS'], [86, 'SNOW SHOWERS'], [99, 'T-STORM'],
+]
+const wmoLabel = (code) => (WMO.find(([max]) => code <= max) || [0, '—'])[1]
 
 /* Schedule from the connected Google Calendar (today). Agent refreshes daily. */
 const seedSchedule = [
   { start: '10:15', end: '11:15', title: 'Piano Lesson', note: 'w/ Candida Borges · protect 15 min warm-up' },
 ]
 
-const seedNews = [
-  { src: 'UNH',  title: 'UnitedHealth — position marked; monitor MLR commentary into next print', time: '', url: 'https://finance.yahoo.com/quote/UNH' },
-  { src: 'MKT',  title: 'Live headlines load from your holdings once deployed (Yahoo feed via /api/news)', time: '', url: 'https://finance.yahoo.com' },
+/* Week ahead — pulled from the connected Google Calendar (Jul 22–28). */
+const seedWeek = [
+  { day: 'WED', date: '22', items: [
+    { t: '07:00', s: 'GMG meeting' },
+    { t: '08:00', s: 'Encon maintenance' },
+    { t: '14:30', s: 'QSBS gut-check · Citrin Cooperman', hot: true },
+  ]},
+  { day: 'THU', date: '23', items: [
+    { t: '07:00', s: 'Sight-read mazurka ×2' },
+  ]},
+  { day: 'FRI', date: '24', items: [
+    { t: '07:00', s: 'Sight-read mazurka ×2' },
+  ]},
+  { day: 'SAT', date: '25', items: [
+    { t: '07:00', s: 'Sight-read mazurka ×2' },
+    { t: '14:00', s: 'The Odyssey — IMAX · Port Chester' },
+  ]},
+  { day: 'SUN', date: '26', items: [
+    { t: '07:00', s: 'Sight-read mazurka ×2' },
+  ]},
+  { day: 'MON', date: '27', items: [
+    { t: '07:00', s: 'Greenwich Central Men’s Meeting' },
+    { t: '15:00', s: 'Kevin Trexler + Matt Sirovich', hot: true },
+  ]},
+  { day: 'TUE', date: '28', items: [
+    { t: '09:15', s: 'Coffee w/ Tim Coleman · CFCF' },
+    { t: '10:15', s: 'Piano Lesson' },
+    { t: '14:30', s: 'Ben’s oral surgery consult · Stamford' },
+  ]},
 ]
+
+/* Streak habits — tap cells to log; add your own in-app. */
+const seedStreaks = {
+  habits: [
+    { id: 'piano', name: 'PIANO' },
+    { id: 'hogan', name: 'HOGAN' },
+    { id: 'move', name: 'WORKOUT' },
+    { id: 'meeting', name: 'MEETING' },
+  ],
+  marks: {},
+}
 
 const seedTodos = [
-  { id: 1, text: 'Write three Elova threshold questions', tag: 'QSBS · WED', pri: true, done: false },
-  { id: 2, text: 'Review latest Field PULSE / VCAS signals', tag: 'FIELD MED · THU', pri: true, done: false },
-  { id: 3, text: 'Gut-check NFLX short into earnings', tag: 'BOOK', pri: false, done: false },
-  { id: 4, text: 'Three 10-minute Hogan sessions', tag: 'CRAFT · 0/3', pri: false, done: false },
+  { id: 1, text: 'Set today’s three must-dos', done: false },
 ]
 
-const TODO_KEY = 'hogan-terminal-todos'
-const symbolsParam = seedBook.map((p) => p.yh).join(',')
+/* Horizon starts empty — goals and obligations are added in-app. */
+const seedHorizon = []
 
-/* ---------- number formatting ---------- */
-const usd = (n) => (n < 0 ? '-$' : '$') + Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 0 })
-const usdSign = (n) => (n >= 0 ? '+$' : '-$') + Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 0 })
+const seedReasons = []
+
+const QUOTES = [
+  { t: 'You have power over your mind — not outside events. Realize this, and you will find strength.', by: 'Marcus Aurelius' },
+  { t: 'We suffer more often in imagination than in reality.', by: 'Seneca' },
+  { t: 'First say to yourself what you would be; then do what you have to do.', by: 'Epictetus' },
+  { t: 'What stands in the way becomes the way.', by: 'Marcus Aurelius' },
+  { t: 'Discipline is choosing between what you want now and what you want most.', by: '—' },
+  { t: 'Fall seven times, stand up eight.', by: 'Japanese proverb' },
+  { t: 'The best way out is always through.', by: 'Robert Frost' },
+  { t: 'Progress, not perfection.', by: '—' },
+  { t: 'Waste no more time arguing what a good man should be. Be one.', by: 'Marcus Aurelius' },
+  { t: 'The man who moves a mountain begins by carrying away small stones.', by: 'after Confucius' },
+  { t: 'How you do anything is how you do everything.', by: '—' },
+  { t: 'Rock bottom became the solid foundation on which I rebuilt my life.', by: 'J.K. Rowling' },
+  { t: 'One day at a time. Today is the one.', by: '—' },
+  { t: 'He who has a why to live can bear almost any how.', by: 'Nietzsche' },
+]
+
+/* ---------- date + number helpers ---------- */
+const todayMid = (now) => new Date(now.getFullYear(), now.getMonth(), now.getDate())
+const parseMid = (s) => {
+  const m = /(\d{4})-(\d{2})-(\d{2})/.exec(String(s || ''))
+  return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null
+}
+const DAY = 86400000
+const daysSince = (startStr, now) => { const d = parseMid(startStr); return d ? Math.max(0, Math.round((todayMid(now) - d) / DAY)) : 0 }
+const daysUntil = (dateStr, now) => { const d = parseMid(dateStr); return d ? Math.round((d - todayMid(now)) / DAY) : Infinity }
+const dayOfYear = (now) => Math.floor((todayMid(now) - new Date(now.getFullYear(), 0, 0)) / DAY)
+
+const usdShort = (n) => {
+  const a = Math.abs(n)
+  if (a >= 1e6) return (n < 0 ? '-$' : '$') + (a / 1e6).toFixed(2) + 'M'
+  if (a >= 1e3) return (n < 0 ? '-$' : '$') + (a / 1e3).toFixed(0) + 'K'
+  return (n < 0 ? '-$' : '$') + a.toFixed(0)
+}
 const px = (n) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const pct = (n) => (n >= 0 ? '+' : '') + n.toFixed(2) + '%'
 const cls = (n) => (n > 0 ? 'pos' : n < 0 ? 'neg' : 'muted')
+const fmtDate = (s) => {
+  const d = parseMid(s)
+  if (!d) return '—'
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit', year: '2-digit' }).format(d).toUpperCase()
+}
 
-function loadTodos() {
+function load(key, fallback) {
   try {
-    const saved = localStorage.getItem(TODO_KEY)
-    return saved ? JSON.parse(saved) : seedTodos
+    const s = localStorage.getItem(key)
+    return s ? JSON.parse(s) : fallback
   } catch {
-    return seedTodos
+    return fallback
+  }
+}
+function loadStr(key, fallback) {
+  try {
+    const v = localStorage.getItem(key)
+    if (v == null) return fallback
+    try { const p = JSON.parse(v); return typeof p === 'string' ? p : v } catch { return v }
+  } catch {
+    return fallback
   }
 }
 
-/* US equity regular session: 09:30–16:00 ET, Mon–Fri (holidays not modeled). */
 function marketState(now) {
   const et = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/New_York', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false,
   }).formatToParts(now)
   const wd = et.find((p) => p.type === 'weekday').value
-  const hh = +et.find((p) => p.type === 'hour').value
-  const mm = +et.find((p) => p.type === 'minute').value
-  const mins = hh * 60 + mm
+  const mins = +et.find((p) => p.type === 'hour').value * 60 + +et.find((p) => p.type === 'minute').value
   const weekday = !['Sat', 'Sun'].includes(wd)
   const open = weekday && mins >= 570 && mins < 960
   return { open, label: open ? 'MKT OPEN' : weekday ? (mins < 570 ? 'PRE-MKT' : 'AFT-MKT') : 'MKT CLOSED' }
 }
 
 export default function CommandCenter({ onOpenHogan }) {
-  const [book, setBook] = useState(seedBook)
-  const [flash, setFlash] = useState({})          // sym -> 'fu' | 'fd'
-  const [live, setLive] = useState(false)
-  const [lastSync, setLastSync] = useState(null)
   const [now, setNow] = useState(() => new Date())
-  const [sort, setSort] = useState({ key: 'dayPnl', dir: -1 })
-  const [news, setNews] = useState(seedNews)
-  const [todos, setTodos] = useState(loadTodos)
-  const [draft, setDraft] = useState('')
+
+  /* portfolio (demoted) */
+  const [book, setBook] = useState(seedBook)
+  const [live, setLive] = useState(false)
+  const [mktOpen, setMktOpen] = useState(() => load(K.mkt, false))
   const prevPx = useRef(Object.fromEntries(seedBook.map((p) => [p.sym, p.last])))
+
+  /* life state */
+  const [soberStart, setSoberStart] = useState(() => loadStr(K.sober, DEFAULT_SOBER))
+  const [editSober, setEditSober] = useState(false)
+  const [focus, setFocus] = useState(() => loadStr(K.focus, ''))
+  const [editFocus, setEditFocus] = useState(false)
+  const [focusDraft, setFocusDraft] = useState('')
+  const [todos, setTodos] = useState(() => load(K.todos, seedTodos))
+  const [todoDraft, setTodoDraft] = useState('')
+  const [horizon, setHorizon] = useState(() => load(K.horizon, seedHorizon))
+  const [hzLabel, setHzLabel] = useState('')
+  const [hzDate, setHzDate] = useState('')
+  const [reasons, setReasons] = useState(() => load(K.reasons, seedReasons))
+  const [reasonDraft, setReasonDraft] = useState('')
+  const [wx, setWx] = useState(null)
+  const [streaks, setStreaks] = useState(() => load(K.streaks, seedStreaks))
+  const [habitDraft, setHabitDraft] = useState('')
+  const [logEntries, setLogEntries] = useState(() => load(K.log, []))
+  const [logDraft, setLogDraft] = useState('')
+  const [wire, setWire] = useState([])
 
   /* clock */
   useEffect(() => {
@@ -97,12 +224,60 @@ export default function CommandCenter({ onOpenHogan }) {
     return () => clearInterval(t)
   }, [])
 
-  /* persist todos */
-  useEffect(() => {
-    try { localStorage.setItem(TODO_KEY, JSON.stringify(todos)) } catch { /* ignore */ }
-  }, [todos])
+  /* persistence */
+  useEffect(() => { try { localStorage.setItem(K.sober, JSON.stringify(soberStart)) } catch {} }, [soberStart])
+  useEffect(() => { try { localStorage.setItem(K.focus, JSON.stringify(focus)) } catch {} }, [focus])
+  useEffect(() => { try { localStorage.setItem(K.todos, JSON.stringify(todos)) } catch {} }, [todos])
+  useEffect(() => { try { localStorage.setItem(K.horizon, JSON.stringify(horizon)) } catch {} }, [horizon])
+  useEffect(() => { try { localStorage.setItem(K.reasons, JSON.stringify(reasons)) } catch {} }, [reasons])
+  useEffect(() => { try { localStorage.setItem(K.mkt, JSON.stringify(mktOpen)) } catch {} }, [mktOpen])
+  useEffect(() => { try { localStorage.setItem(K.streaks, JSON.stringify(streaks)) } catch {} }, [streaks])
+  useEffect(() => { try { localStorage.setItem(K.log, JSON.stringify(logEntries)) } catch {} }, [logEntries])
 
-  /* live quotes — Vercel serverless proxy to Yahoo (no key). Falls back to seed. */
+  /* wire headlines — holdings news via Vercel proxy, refreshed every 5 min */
+  useEffect(() => {
+    let alive = true
+    async function pull() {
+      try {
+        const res = await fetch(`/api/news?symbols=${symbolsParam}`)
+        if (!res.ok) throw new Error('no api')
+        const data = await res.json()
+        if (alive && Array.isArray(data?.items)) setWire(data.items.slice(0, 10))
+      } catch { /* tape falls back to movers + wx */ }
+    }
+    pull()
+    const id = setInterval(pull, 300000)
+    return () => { alive = false; clearInterval(id) }
+  }, [])
+
+  /* weather — Open-Meteo direct from the browser, refreshed every 15 min */
+  useEffect(() => {
+    let alive = true
+    async function pull() {
+      try {
+        const res = await fetch(WX_URL)
+        if (!res.ok) throw new Error('wx')
+        const d = await res.json()
+        if (!alive || !d?.current) return
+        setWx({
+          temp: Math.round(d.current.temperature_2m),
+          feels: Math.round(d.current.apparent_temperature),
+          label: wmoLabel(d.current.weather_code),
+          wind: Math.round(d.current.wind_speed_10m),
+          hi: Math.round(d.daily.temperature_2m_max[0]),
+          lo: Math.round(d.daily.temperature_2m_min[0]),
+          precip: d.daily.precipitation_probability_max[0],
+          sunrise: (d.daily.sunrise[0] || '').slice(11, 16),
+          sunset: (d.daily.sunset[0] || '').slice(11, 16),
+        })
+      } catch { /* keep last reading */ }
+    }
+    pull()
+    const id = setInterval(pull, 900000)
+    return () => { alive = false; clearInterval(id) }
+  }, [])
+
+  /* live quotes — Vercel proxy to Yahoo (no key). Falls back to seed snapshot. */
   useEffect(() => {
     let alive = true
     async function pull() {
@@ -111,245 +286,249 @@ export default function CommandCenter({ onOpenHogan }) {
         if (!res.ok) throw new Error('no api')
         const data = await res.json()
         if (!alive || !data?.quotes) return
-        const nextFlash = {}
         setBook((cur) =>
           cur.map((p) => {
             const q = data.quotes[p.yh]
             if (!q || typeof q.price !== 'number') return p
-            const before = prevPx.current[p.sym]
-            if (q.price > before) nextFlash[p.sym] = 'fu'
-            else if (q.price < before) nextFlash[p.sym] = 'fd'
             prevPx.current[p.sym] = q.price
-            return {
-              ...p,
-              last: q.price,
-              prevClose: typeof q.prevClose === 'number' ? q.prevClose : p.prevClose,
-            }
+            return { ...p, last: q.price, prevClose: typeof q.prevClose === 'number' ? q.prevClose : p.prevClose }
           })
         )
-        setFlash(nextFlash)
         setLive(true)
-        setLastSync(new Date())
       } catch {
         if (alive) setLive(false)
       }
     }
     pull()
-    const id = setInterval(pull, 12000)
+    const id = setInterval(pull, 15000)
     return () => { alive = false; clearInterval(id) }
   }, [])
 
-  /* clear flash classes shortly after they mount */
-  useEffect(() => {
-    if (!Object.keys(flash).length) return
-    const t = setTimeout(() => setFlash({}), 950)
-    return () => clearTimeout(t)
-  }, [flash])
-
-  /* live news — same proxy pattern, refreshed every 5 min */
-  useEffect(() => {
-    let alive = true
-    async function pull() {
-      try {
-        const res = await fetch(`/api/news?symbols=${symbolsParam}`)
-        if (!res.ok) throw new Error('no api')
-        const data = await res.json()
-        if (alive && Array.isArray(data?.items) && data.items.length) setNews(data.items.slice(0, 14))
-      } catch { /* keep seed */ }
-    }
-    pull()
-    const id = setInterval(pull, 300000)
-    return () => { alive = false; clearInterval(id) }
-  }, [])
-
-  /* derived book rows with day + open P&L */
-  const rows = useMemo(() => {
-    return book.map((p) => {
+  /* ---------- derived ---------- */
+  const rows = useMemo(() =>
+    book.map((p) => {
       const chgAbs = p.last - p.prevClose
       const chgPct = p.prevClose ? (chgAbs / p.prevClose) * 100 : 0
       const dayPnl = p.qty * chgAbs
-      const mv = p.qty * p.last
-      const openPnl = p.qty * (p.last - p.avg)
-      return { ...p, chgPct, dayPnl, mv, openPnl, side: p.qty >= 0 ? 'long' : 'short' }
-    })
-  }, [book])
+      return { ...p, chgPct, dayPnl, mv: p.qty * p.last }
+    }), [book])
 
-  const totals = useMemo(() => {
+  const mkt = useMemo(() => {
     const dayPnl = rows.reduce((s, r) => s + r.dayPnl, 0)
-    const openPnl = rows.reduce((s, r) => s + r.openPnl, 0)
-    const gross = rows.reduce((s, r) => s + Math.abs(r.mv), 0)
-    const netLiq = netLiqSeed + (rows.reduce((s, r) => s + r.last * r.qty, 0) - seedBook.reduce((s, r) => s + r.last * r.qty, 0))
+    const netLiq = netLiqSeed + rows.reduce((s, r) => s + r.last * r.qty, 0) - seedBook.reduce((s, r) => s + r.last * r.qty, 0)
     const dayPct = (dayPnl / (netLiq - dayPnl)) * 100
-    return { dayPnl, openPnl, gross, netLiq, dayPct }
+    const movers = [...rows].sort((a, b) => Math.abs(b.dayPnl) - Math.abs(a.dayPnl)).slice(0, 4)
+    return { dayPnl, netLiq, dayPct, movers }
   }, [rows])
 
-  const sortedRows = useMemo(() => {
-    const r = [...rows]
-    r.sort((a, b) => {
-      const av = sort.key === 'sym' ? a.sym : a[sort.key]
-      const bv = sort.key === 'sym' ? b.sym : b[sort.key]
-      if (av < bv) return -1 * sort.dir
-      if (av > bv) return 1 * sort.dir
-      return 0
-    })
-    return r
-  }, [rows, sort])
+  const sober = useMemo(() => ({ days: daysSince(soberStart, now) }), [soberStart, now])
 
-  const setSortKey = (key) =>
-    setSort((s) => (s.key === key ? { key, dir: -s.dir } : { key, dir: key === 'sym' ? 1 : -1 }))
+  const horizonSorted = useMemo(() => {
+    return [...horizon]
+      .map((h) => ({ ...h, t: h.date ? daysUntil(h.date, now) : Infinity }))
+      .sort((a, b) => a.t - b.t)
+  }, [horizon, now])
 
-  const mkt = marketState(now)
+  const quote = QUOTES[dayOfYear(now) % QUOTES.length]
+  const why = reasons.length ? reasons[dayOfYear(now) % reasons.length] : null
+
+  const marketStatus = marketState(now)
   const clock = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
   }).format(now)
   const dateStr = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York', weekday: 'short', month: 'short', day: '2-digit', year: 'numeric',
+    timeZone: 'America/New_York', weekday: 'short', month: 'short', day: '2-digit',
   }).format(now).toUpperCase()
   const nowHM = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: false,
   }).format(now)
 
-  const syncAgo = lastSync ? Math.max(0, Math.round((now - lastSync) / 1000)) : null
+  /* ---------- actions ---------- */
+  const openFocusEdit = () => { setFocusDraft(focus); setEditFocus(true) }
+  const saveFocus = () => { setFocus(focusDraft.trim()); setEditFocus(false) }
 
-  /* todos */
   const addTodo = () => {
-    const text = draft.trim()
+    const text = todoDraft.trim()
     if (!text) return
-    setTodos((t) => [{ id: Date.now(), text, tag: '', pri: false, done: false }, ...t])
-    setDraft('')
+    setTodos((t) => [...t, { id: Date.now(), text, done: false }])
+    setTodoDraft('')
   }
   const toggleTodo = (id) => setTodos((t) => t.map((x) => (x.id === id ? { ...x, done: !x.done } : x)))
   const delTodo = (id) => setTodos((t) => t.filter((x) => x.id !== id))
-  const clearDone = () => setTodos((t) => t.filter((x) => !x.done))
-  const openCount = todos.filter((t) => !t.done).length
 
-  const th = (key, label) => (
-    <th className={sort.key === key ? 'sorted' : ''} onClick={() => setSortKey(key)}>
-      {label}{sort.key === key && <span className="car"> {sort.dir < 0 ? '▼' : '▲'}</span>}
-    </th>
-  )
+  const addHorizon = () => {
+    const label = hzLabel.trim()
+    if (!label) return
+    setHorizon((h) => [...h, { id: Date.now(), label, date: hzDate || null, note: '', progress: null }])
+    setHzLabel(''); setHzDate('')
+  }
+  const delHorizon = (id) => setHorizon((h) => h.filter((x) => x.id !== id))
+
+  const addReason = () => {
+    const text = reasonDraft.trim()
+    if (!text) return
+    setReasons((r) => [...r, text])
+    setReasonDraft('')
+  }
+  const delReason = (i) => setReasons((r) => r.filter((_, idx) => idx !== i))
+
+  /* streaks */
+  const isoOf = (d) => new Intl.DateTimeFormat('en-CA').format(d)
+  const todayISO = isoOf(now)
+  const last28 = useMemo(() => {
+    return [...Array(28)].map((_, i) => isoOf(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 27 + i)))
+  }, [todayISO]) // eslint-disable-line react-hooks/exhaustive-deps
+  const toggleMark = (habitId, iso) => {
+    setStreaks((s) => {
+      const cur = new Set(s.marks[habitId] || [])
+      cur.has(iso) ? cur.delete(iso) : cur.add(iso)
+      return { ...s, marks: { ...s.marks, [habitId]: [...cur] } }
+    })
+  }
+  const streakCount = (habitId) => {
+    const marked = new Set(streaks.marks[habitId] || [])
+    let count = 0
+    // streak = consecutive marked days ending today (or yesterday if today not yet logged)
+    let cursor = marked.has(todayISO) ? 0 : 1
+    for (;;) {
+      const iso = isoOf(new Date(now.getFullYear(), now.getMonth(), now.getDate() - cursor))
+      if (!marked.has(iso)) break
+      count++; cursor++
+    }
+    return count
+  }
+  const addHabit = () => {
+    const name = habitDraft.trim().toUpperCase()
+    if (!name) return
+    setStreaks((s) => ({ ...s, habits: [...s.habits, { id: `h${Date.now()}`, name }] }))
+    setHabitDraft('')
+  }
+  const delHabit = (id) => setStreaks((s) => ({ ...s, habits: s.habits.filter((h) => h.id !== id) }))
+
+  /* captain's log — one line per day; saving again overwrites today's line */
+  const todayLog = logEntries.find((e) => e.d === todayISO)
+  const saveLog = () => {
+    const text = logDraft.trim()
+    if (!text) return
+    setLogEntries((es) => [{ d: todayISO, t: text }, ...es.filter((e) => e.d !== todayISO)])
+    setLogDraft('')
+  }
+
+  const openTodos = todos.filter((t) => !t.done).length
 
   return (
     <div className="term">
-      {/* ---------- TOP BAR ---------- */}
+      {/* ---------- MASTHEAD ---------- */}
       <header className="term-bar">
         <div className="bar-brand">
           <b>TAJAR&nbsp;TERMINAL</b>
           <span>PERSONAL DESK</span>
         </div>
         <div className="bar-stats">
-          <div className="bar-stat">
-            <u>NET LIQ</u>
-            <b>{usd(totals.netLiq)}</b>
-          </div>
-          <div className="bar-stat">
-            <u>DAY P&amp;L</u>
-            <b className={cls(totals.dayPnl)}>{usdSign(totals.dayPnl)}</b>
-          </div>
-          <div className="bar-stat">
-            <u>DAY %</u>
-            <b className={cls(totals.dayPct)}>{pct(totals.dayPct)}</b>
-          </div>
-          <div className="bar-stat">
-            <u>OPEN P&amp;L</u>
-            <b className={cls(totals.openPnl)}>{usdSign(totals.openPnl)}</b>
-          </div>
+          <div className="bar-stat"><u>DATE</u><b>{dateStr}</b></div>
+          <div className="bar-stat"><u>GREENWICH WX</u><b>{wx ? `${wx.temp}°F ${wx.label}` : '—'}</b></div>
+          <div className="bar-stat"><u>OPEN TODAY</u><b>{openTodos} TASK{openTodos === 1 ? '' : 'S'}</b></div>
+          <div className="bar-stat"><u>HORIZON</u><b>{horizon.length} AHEAD</b></div>
         </div>
         <div className="bar-clock">
           <time>{clock}<span style={{ fontSize: 9, color: 'var(--dim)', letterSpacing: 1 }}> ET</span></time>
-          <span className={`mkt ${mkt.open ? 'open' : 'closed'}`}><i className="dot" />{mkt.label}</span>
+          <button className="sober-chip" onClick={() => setEditSober((v) => !v)} title="Sober day counter — tap to set start date">
+            SOBER <b>{sober.days}D</b>
+          </button>
+          {editSober && (
+            <span className="sober-date-edit" style={{ marginTop: 0 }}>
+              <input type="date" value={soberStart} max={new Intl.DateTimeFormat('en-CA').format(now)}
+                onChange={(e) => e.target.value && setSoberStart(e.target.value)} />
+              <button onClick={() => setEditSober(false)}>OK</button>
+            </span>
+          )}
         </div>
       </header>
 
-      {/* ---------- MARQUEE TAPE ---------- */}
+      {/* ---------- WIRE TAPE ---------- */}
       <div className="tape" aria-hidden="true">
         <div className="tape-track">
-          {[...rows, ...rows].map((r, i) => (
-            <span className="tape-item" key={`${r.sym}-${i}`}>
-              <b>{r.sym}</b>
-              <span className="px">{px(r.last)}</span>
-              <span className={`chg ${r.chgPct >= 0 ? 'up' : 'down'}`}>{pct(r.chgPct)}</span>
+          {[0, 1].map((rep) => (
+            <span key={rep}>
+              {wx && (
+                <span className="tape-item">
+                  <b>GREENWICH</b>
+                  <span className="px">{wx.temp}°F {wx.label}</span>
+                  <span className="chg down">{wx.precip}% PRECIP</span>
+                </span>
+              )}
+              {mkt.movers.map((r) => (
+                <span className="tape-item" key={`${r.sym}-${rep}`}>
+                  <b>{r.sym}</b>
+                  <span className="px">{px(r.last)}</span>
+                  <span className={`chg ${r.chgPct >= 0 ? 'up' : 'down'}`}>{pct(r.chgPct)}</span>
+                </span>
+              ))}
+              <span className="tape-item">
+                <b>BOOK</b>
+                <span className="px">{usdShort(mkt.netLiq)}</span>
+                <span className={`chg ${mkt.dayPnl >= 0 ? 'up' : 'down'}`}>{pct(mkt.dayPct)}</span>
+              </span>
+              {wire.map((n, i) => (
+                <span className="tape-item" key={`w${i}-${rep}`}>
+                  <b>{n.src}</b>
+                  <span className="px">{n.title}</span>
+                </span>
+              ))}
+              {wire.length === 0 && (
+                <span className="tape-item">
+                  <b>WIRE</b>
+                  <span className="px">Headlines go live on deploy — /api/news feeds this tape from your holdings</span>
+                </span>
+              )}
             </span>
           ))}
         </div>
       </div>
 
       <div className="term-grid">
-        {/* ---------- PORTFOLIO ---------- */}
+        {/* ---------- TODAY ---------- */}
         <section className="panel span-2">
           <div className="panel-head">
-            <h2>PORTFOLIO · POSITIONS</h2>
-            <span className="meta">
-              {rows.length} POS · GROSS <b>{usd(totals.gross)}</b> · CASH <b>{usd(cashValue)}</b>
-            </span>
-          </div>
-          <div className="pf-summary">
-            <div><u>NET LIQ</u><b>{usd(totals.netLiq)}</b></div>
-            <div><u>DAY P&amp;L</u><b className={cls(totals.dayPnl)}>{usdSign(totals.dayPnl)}</b></div>
-            <div><u>OPEN P&amp;L</u><b className={cls(totals.openPnl)}>{usdSign(totals.openPnl)}</b></div>
-            <div><u>GROSS EXP</u><b>{usd(totals.gross)}</b></div>
-          </div>
-          <div className="pf-table">
-            <table className="book">
-              <thead>
-                <tr>
-                  {th('sym', 'SYMBOL')}
-                  {th('last', 'LAST')}
-                  {th('chgPct', 'CHG%')}
-                  {th('dayPnl', 'DAY P&L')}
-                  {th('openPnl', 'OPEN P&L')}
-                  {th('mv', 'MKT VAL')}
-                </tr>
-              </thead>
-              <tbody>
-                {sortedRows.map((r) => (
-                  <tr key={r.sym}>
-                    <td className="sym">
-                      <b>{r.sym}</b>
-                      <span className={`ls ${r.side}`}>{r.side === 'long' ? 'L' : 'S'} {Math.abs(r.qty).toLocaleString()}</span>
-                      <small>{r.name}</small>
-                    </td>
-                    <td className={flash[r.sym] || ''}>{px(r.last)}</td>
-                    <td className={cls(r.chgPct)}>{pct(r.chgPct)}</td>
-                    <td className={cls(r.dayPnl)}>{usdSign(r.dayPnl)}</td>
-                    <td className={cls(r.openPnl)}>{usdSign(r.openPnl)}</td>
-                    <td className="muted">{usd(r.mv)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        {/* ---------- NEWS ---------- */}
-        <section className="panel">
-          <div className="panel-head">
-            <h2>TAPE · HOLDINGS NEWS</h2>
-            <span className="meta">{live ? 'LIVE' : 'SEED'}</span>
-          </div>
-          <div className="news-list">
-            {news.map((n, i) => (
-              <a className="news-row" key={`${n.title}-${i}`} href={n.url} target="_blank" rel="noreferrer">
-                <div>
-                  <div className="nsrc">{n.src}</div>
-                  {n.time && <div className="ntime">{n.time}</div>}
-                </div>
-                <div>
-                  <h3>{n.title}</h3>
-                </div>
-              </a>
-            ))}
-          </div>
-        </section>
-
-        {/* ---------- SCHEDULE ---------- */}
-        <section className="panel">
-          <div className="panel-head">
             <h2>TODAY · {dateStr}</h2>
-            <span className="meta">{seedSchedule.length} {seedSchedule.length === 1 ? 'EVENT' : 'EVENTS'}</span>
+            <span className="meta">{seedSchedule.length} EVENT{seedSchedule.length === 1 ? '' : 'S'} · <b>{openTodos}</b> TO DO</span>
           </div>
+
+          <div className="focus">
+            <u>
+              TODAY&rsquo;S FOCUS
+              {!editFocus && <button onClick={openFocusEdit}>EDIT</button>}
+            </u>
+            {editFocus ? (
+              <div className="edit-row">
+                <input
+                  autoFocus value={focusDraft}
+                  onChange={(e) => setFocusDraft(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && saveFocus()}
+                  placeholder="The one thing that defines today"
+                />
+                <button onClick={saveFocus}>SET</button>
+              </div>
+            ) : focus ? (
+              <h1 onClick={openFocusEdit}>{focus}</h1>
+            ) : (
+              <h1 className="empty" onClick={openFocusEdit}>Tap to set today&rsquo;s one focus &rarr;</h1>
+            )}
+          </div>
+
+          {wx && (
+            <div className="wx-strip">
+              <span><u>NOW</u><b>{wx.temp}°F</b></span>
+              <span><u>FEELS</u><b>{wx.feels}°F</b></span>
+              <span><u>HI / LO</u><b>{wx.hi}° / {wx.lo}°</b></span>
+              <span><u>PRECIP</u><b>{wx.precip}%</b></span>
+              <span><u>WIND</u><b>{wx.wind} MPH</b></span>
+              <span><u>SUN</u><b>{wx.sunrise}–{wx.sunset}</b></span>
+            </div>
+          )}
+
           <div className="agenda">
-            {seedSchedule.length === 0 && <div className="agenda-empty">No commitments. Clear board.</div>}
+            {seedSchedule.length === 0 && <div className="agenda-empty">No commitments today. Clear board.</div>}
             {seedSchedule.map((e, i) => {
               const active = nowHM >= e.start && nowHM < e.end
               return (
@@ -358,7 +537,85 @@ export default function CommandCenter({ onOpenHogan }) {
                   <div className="agenda-body">
                     <h3>{e.title}</h3>
                     {e.note && <p>{e.note}</p>}
-                    {active && <span className="now">● NOW</span>}
+                    {active && <span className="now">&#9679; NOW</span>}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          <div className="todo-add">
+            <input
+              value={todoDraft}
+              onChange={(e) => setTodoDraft(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addTodo()}
+              placeholder="ADD A MUST-DO — PRESS ENTER"
+            />
+            <button onClick={addTodo}>+ ADD</button>
+          </div>
+          <div className="todo-list">
+            {todos.map((t) => (
+              <button className={`todo-item ${t.done ? 'done' : ''}`} key={t.id} onClick={() => toggleTodo(t.id)}>
+                <span className="todo-box">{t.done ? '✓' : ''}</span>
+                <span className="txt">{t.text}</span>
+                <span className="todo-del" onClick={(e) => { e.stopPropagation(); delTodo(t.id) }} aria-label="delete">&#10005;</span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* ---------- WEEK AHEAD ---------- */}
+        <section className="panel">
+          <div className="panel-head">
+            <h2>WEEK AHEAD</h2>
+            <span className="meta">JUL 22–28 · SYNCED</span>
+          </div>
+          <div className="week-list">
+            {seedWeek.map((d) => (
+              <div className="week-row" key={d.day}>
+                <div className="week-day"><b>{d.day}</b><small>{d.date}</small></div>
+                <div className="week-items">
+                  {d.items.map((it, i) => (
+                    <p key={i} className={it.hot ? 'hot' : ''}>
+                      <span>{it.t}</span> {it.s}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ---------- HORIZON ---------- */}
+        <section className="panel">
+          <div className="panel-head">
+            <h2>HORIZON · NEXT WEEKS</h2>
+            <span className="meta">GOALS &amp; OBLIGATIONS</span>
+          </div>
+          <div className="hz-add">
+            <input value={hzLabel} onChange={(e) => setHzLabel(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addHorizon()} placeholder="ADD A GOAL / OBLIGATION" />
+            <input type="date" value={hzDate} onChange={(e) => setHzDate(e.target.value)} />
+            <button onClick={addHorizon}>+ ADD</button>
+          </div>
+          <div className="horizon-list">
+            {horizonSorted.length === 0 && <div className="agenda-empty">Nothing on the horizon yet. Add your goals above.</div>}
+            {horizonSorted.map((h) => {
+              const tone = h.kind === 'MILESTONE' ? 'mile' : h.t === Infinity ? 'far' : h.t <= 3 ? 'soon' : h.t <= 10 ? 'near' : 'far'
+              return (
+                <div className="horizon-row" key={h.id}>
+                  <div className={`tminus ${tone}`}>
+                    {h.t === Infinity ? <b>&mdash;</b> : h.t <= 0 ? <b>DUE</b> : <><b>{h.t}</b><small>DAYS</small></>}
+                  </div>
+                  <div className="hz-body">
+                    <span className="hz-del" onClick={() => delHorizon(h.id)} aria-label="delete">&#10005;</span>
+                    <h3>{h.label}{h.kind && <span className="kind">{h.kind}</span>}</h3>
+                    {(h.date || h.note) && (
+                      <p>{h.date ? fmtDate(h.date) : ''}{h.date && h.note ? ' · ' : ''}{h.note || ''}</p>
+                    )}
+                    {typeof h.progress === 'number' && (
+                      <div className="hz-progress"><span style={{ width: `${h.progress}%` }} /></div>
+                    )}
                   </div>
                 </div>
               )
@@ -366,45 +623,155 @@ export default function CommandCenter({ onOpenHogan }) {
           </div>
         </section>
 
-        {/* ---------- TODO ---------- */}
-        <section className="panel span-2">
+        {/* ---------- STREAKS ---------- */}
+        <section className="panel">
           <div className="panel-head">
-            <h2>EXECUTION · TODO</h2>
-            <span className="meta"><b>{openCount}</b> OPEN · {todos.length - openCount} DONE</span>
+            <h2>STREAKS · 28D</h2>
+            <span className="meta">TAP A CELL TO LOG</span>
+          </div>
+          <div className="streak-list">
+            {streaks.habits.map((h) => {
+              const marked = new Set(streaks.marks[h.id] || [])
+              return (
+                <div className="streak-row" key={h.id}>
+                  <div className="streak-name">
+                    {h.name}
+                    <span className="streak-del" onClick={() => delHabit(h.id)} aria-label="delete">&#10005;</span>
+                  </div>
+                  <div className="streak-cells">
+                    {last28.map((iso) => (
+                      <button
+                        key={iso}
+                        className={`cell ${marked.has(iso) ? 'on' : ''} ${iso === todayISO ? 'today' : ''}`}
+                        onClick={() => toggleMark(h.id, iso)}
+                        title={iso}
+                      />
+                    ))}
+                  </div>
+                  <div className="streak-count">{streakCount(h.id)}D</div>
+                </div>
+              )
+            })}
           </div>
           <div className="todo-add">
-            <input
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && addTodo()}
-              placeholder="ADD TASK — PRESS ENTER"
-            />
-            <button onClick={addTodo}>+ ADD</button>
+            <input value={habitDraft} onChange={(e) => setHabitDraft(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addHabit()} placeholder="ADD A HABIT — PRESS ENTER" />
+            <button onClick={addHabit}>+ ADD</button>
           </div>
-          <div className="todo-list">
-            {todos.map((t) => (
-              <button className={`todo-item ${t.done ? 'done' : ''} ${t.pri ? 'pri' : ''}`} key={t.id} onClick={() => toggleTodo(t.id)}>
-                <span className="todo-box">{t.done ? '✓' : ''}</span>
-                <span className="txt">{t.text}</span>
-                {t.tag && <span className="tag">{t.pri ? '★ ' : ''}{t.tag}</span>}
-                <span className="todo-del" onClick={(e) => { e.stopPropagation(); delTodo(t.id) }} aria-label="delete">✕</span>
-              </button>
+        </section>
+
+        {/* ---------- CAPTAIN'S LOG ---------- */}
+        <section className="panel">
+          <div className="panel-head">
+            <h2>CAPTAIN&rsquo;S LOG</h2>
+            <span className="meta">{logEntries.length} ENTRIES</span>
+          </div>
+          <div className="todo-add">
+            <input value={logDraft} onChange={(e) => setLogDraft(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && saveLog()}
+              placeholder={todayLog ? 'REWRITE TODAY’S LINE — PRESS ENTER' : 'ONE LINE ABOUT TODAY — PRESS ENTER'} />
+            <button onClick={saveLog}>LOG</button>
+          </div>
+          <div className="log-list">
+            {logEntries.length === 0 && <div className="agenda-empty">No entries yet. One honest line a day.</div>}
+            {logEntries.slice(0, 10).map((e) => (
+              <div className="log-row" key={e.d}>
+                <span className="log-date">{fmtDate(e.d)}</span>
+                <p>{e.t}</p>
+              </div>
             ))}
           </div>
-          <div className="todo-foot">
-            <span>TAP TO TOGGLE · ✕ TO REMOVE</span>
-            <button onClick={clearDone}>CLEAR DONE</button>
+        </section>
+
+        {/* ---------- GROUNDING ---------- */}
+        <section className="panel span-2">
+          <div className="panel-head">
+            <h2>GROUNDING</h2>
+            <span className="meta">WHY</span>
           </div>
+          <div className="ground">
+            <div className="quote">
+              <p>&ldquo;{quote.t}&rdquo;</p>
+              <cite>&mdash; {quote.by}</cite>
+            </div>
+            {why && (
+              <div className="why-line">
+                <u>YOUR WHY · TODAY</u>
+                <p>{why}</p>
+              </div>
+            )}
+            <div className="reasons">
+              {reasons.length === 0 && <div className="reason-empty">Add your own reasons — they rotate here daily.</div>}
+              {reasons.map((r, i) => (
+                <div className="reason-row" key={i}>
+                  <span className="rdot">&#9642;</span>
+                  <span className="rtext">{r}</span>
+                  <span className="rdel" onClick={() => delReason(i)} aria-label="delete">&#10005;</span>
+                </div>
+              ))}
+            </div>
+            <div className="todo-add">
+              <input value={reasonDraft} onChange={(e) => setReasonDraft(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addReason()} placeholder="ADD A REASON WHY — PRESS ENTER" />
+              <button onClick={addReason}>+ ADD</button>
+            </div>
+          </div>
+        </section>
+
+        {/* ---------- MARKETS (collapsed strip) ---------- */}
+        <section className="panel span-2">
+          <div className="panel-head mkt-head" onClick={() => setMktOpen((v) => !v)}>
+            <h2>MARKETS</h2>
+            <span className="meta">
+              NETLIQ <b>{usdShort(mkt.netLiq)}</b> · <span className={cls(mkt.dayPnl)}>{pct(mkt.dayPct)}</span>
+              <span className="chev"> &nbsp;{mktOpen ? '▲ HIDE' : '▼ BOOK'}</span>
+            </span>
+          </div>
+          {!mktOpen ? (
+            <div className="mkt-strip">
+              <div className="cell"><u>NET LIQ</u><b>{usdShort(mkt.netLiq)}</b></div>
+              <div className="cell"><u>DAY P&amp;L</u><b className={cls(mkt.dayPnl)}>{usdShort(mkt.dayPnl)}</b></div>
+              <div className="movers">
+                {mkt.movers.map((m) => (
+                  <span className="mv" key={m.sym}>
+                    <b>{m.sym}</b> <span className={cls(m.chgPct)}>{pct(m.chgPct)}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="pf-table">
+              <table className="book">
+                <thead>
+                  <tr><th>SYMBOL</th><th>LAST</th><th>CHG%</th><th>DAY P&amp;L</th><th>MKT VAL</th></tr>
+                </thead>
+                <tbody>
+                  {[...rows].sort((a, b) => b.dayPnl - a.dayPnl).map((r) => (
+                    <tr key={r.sym}>
+                      <td className="sym">
+                        <b>{r.sym}</b>
+                        <span className={`ls ${r.qty >= 0 ? 'long' : 'short'}`}>{r.qty >= 0 ? 'L' : 'S'} {Math.abs(r.qty).toLocaleString()}</span>
+                        <small>{r.name}</small>
+                      </td>
+                      <td>{px(r.last)}</td>
+                      <td className={cls(r.chgPct)}>{pct(r.chgPct)}</td>
+                      <td className={cls(r.dayPnl)}>{(r.dayPnl >= 0 ? '+' : '') + usdShort(r.dayPnl)}</td>
+                      <td className="muted">{usdShort(r.mv)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
       </div>
 
       {/* ---------- FOOTER ---------- */}
       <footer className="term-foot">
         <span className="data-note">
-          POSITIONS FROM CONNECTED BROKERAGE · QUOTES {live ? 'LIVE (YAHOO)' : 'SNAPSHOT'}
-          {syncAgo != null && ` · SYNC ${syncAgo}s AGO`}
+          PRIVATE · STORED ON THIS DEVICE · QUOTES {live ? 'LIVE (YAHOO)' : 'SNAPSHOT'}
         </span>
-        <button onClick={onOpenHogan}>OPEN HOGAN COACH ↗</button>
+        <button onClick={onOpenHogan}>OPEN HOGAN COACH &#8599;</button>
       </footer>
     </div>
   )
