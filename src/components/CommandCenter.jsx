@@ -160,6 +160,53 @@ const fmtDate = (s) => {
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit', year: '2-digit' }).format(d).toUpperCase()
 }
 
+/* ---------- goal command-line parser ----------
+   One input: goal text optionally ending with a date token —
+   "qsbs decision 7/23" · "renew passport aug 15" · "call brett in 10d"
+   · "recital fri" · "file taxes 2026-10-15". Returns { label, date|null }. */
+const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+const WEEKDAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+function parseGoal(raw, now) {
+  const s = raw.trim().replace(/\s+/g, ' ')
+  if (!s) return null
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const iso = (d) => new Intl.DateTimeFormat('en-CA').format(d)
+  const rollYear = (d) => (d < today ? new Date(d.getFullYear() + 1, d.getMonth(), d.getDate()) : d)
+  const rules = [
+    { re: / (\d{4})-(\d{1,2})-(\d{1,2})$/i,
+      to: (m) => new Date(+m[1], +m[2] - 1, +m[3]) },
+    { re: / (\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?$/,
+      to: (m) => {
+        const y = m[3] ? (+m[3] < 100 ? 2000 + +m[3] : +m[3]) : today.getFullYear()
+        const d = new Date(y, +m[1] - 1, +m[2])
+        return m[3] ? d : rollYear(d)
+      } },
+    { re: / (jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.? (\d{1,2})$/i,
+      to: (m) => rollYear(new Date(today.getFullYear(), MONTHS.indexOf(m[1].toLowerCase()), +m[2])) },
+    { re: / (?:in )?(\d{1,3})d$/i,
+      to: (m) => new Date(today.getFullYear(), today.getMonth(), today.getDate() + +m[1]) },
+    { re: / (tomorrow|tmrw)$/i,
+      to: () => new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1) },
+    { re: / today$/i, to: () => today },
+    { re: / (sun|mon|tue|wed|thu|fri|sat)[a-z]*$/i,
+      to: (m) => {
+        const target = WEEKDAYS.indexOf(m[1].toLowerCase())
+        const delta = ((target - today.getDay()) + 7) % 7 || 7
+        return new Date(today.getFullYear(), today.getMonth(), today.getDate() + delta)
+      } },
+  ]
+  for (const { re, to } of rules) {
+    const m = s.match(re)
+    if (!m) continue
+    const label = s.slice(0, m.index).trim()
+    if (!label) continue
+    const d = to(m)
+    if (Number.isNaN(d?.getTime())) continue
+    return { label, date: iso(d) }
+  }
+  return { label: s, date: null }
+}
+
 function load(key, fallback) {
   try {
     const s = localStorage.getItem(key)
@@ -207,8 +254,7 @@ export default function CommandCenter() {
   const [todos, setTodos] = useState(() => load(K.todos, seedTodos))
   const [todoDraft, setTodoDraft] = useState('')
   const [horizon, setHorizon] = useState(() => load(K.horizon, seedHorizon))
-  const [hzLabel, setHzLabel] = useState('')
-  const [hzDate, setHzDate] = useState('')
+  const [hzDraft, setHzDraft] = useState('')
   const [reasons, setReasons] = useState(() => load(K.reasons, seedReasons))
   const [reasonDraft, setReasonDraft] = useState('')
   const [wx, setWx] = useState(null)
@@ -356,11 +402,11 @@ export default function CommandCenter() {
   const toggleTodo = (id) => setTodos((t) => t.map((x) => (x.id === id ? { ...x, done: !x.done } : x)))
   const delTodo = (id) => setTodos((t) => t.filter((x) => x.id !== id))
 
+  const hzParsed = useMemo(() => parseGoal(hzDraft, now), [hzDraft, now])
   const addHorizon = () => {
-    const label = hzLabel.trim()
-    if (!label) return
-    setHorizon((h) => [...h, { id: Date.now(), label, date: hzDate || null, note: '', progress: null }])
-    setHzLabel(''); setHzDate('')
+    if (!hzParsed) return
+    setHorizon((h) => [...h, { id: Date.now(), label: hzParsed.label, date: hzParsed.date, note: '', progress: null }])
+    setHzDraft('')
   }
   const delHorizon = (id) => setHorizon((h) => h.filter((x) => x.id !== id))
 
@@ -593,10 +639,15 @@ export default function CommandCenter() {
             <span className="meta">GOALS &amp; OBLIGATIONS</span>
           </div>
           <div className="hz-add">
-            <input value={hzLabel} onChange={(e) => setHzLabel(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && addHorizon()} placeholder="ADD A GOAL / OBLIGATION" />
-            <input type="date" value={hzDate} onChange={(e) => setHzDate(e.target.value)} />
-            <button onClick={addHorizon}>+ ADD</button>
+            <span className="prompt">&gt;</span>
+            <input value={hzDraft} onChange={(e) => setHzDraft(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addHorizon()}
+              placeholder="ADD GOAL · END WITH A DATE — JUL 23 · 7/23 · IN 10D · FRI" />
+            {hzParsed?.date && (
+              <span className="hz-preview">
+                {fmtDate(hzParsed.date)} · T-{daysUntil(hzParsed.date, now)}D
+              </span>
+            )}
           </div>
           <div className="horizon-list">
             {horizonSorted.length === 0 && <div className="agenda-empty">Nothing on the horizon yet. Add your goals above.</div>}

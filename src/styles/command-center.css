@@ -558,25 +558,36 @@ td.fd { animation: flashDown 0.9s ease-out; }
   color: var(--dim-2); font-size: 13px; cursor: pointer; line-height: 1;
 }
 .horizon-row:hover .hz-del { color: var(--down); }
+/* command-line style: "> goal text jul 23" with live parse readout */
 .hz-add {
-  display: grid;
-  grid-template-columns: 1fr 128px 54px;
+  display: flex;
+  align-items: center;
+  background: #060504;
   border-bottom: 1px solid var(--line-bright);
 }
+.hz-add .prompt {
+  color: var(--amber);
+  font-weight: 700;
+  padding-left: 12px;
+}
 .hz-add input {
-  background: #060504; border: 0; border-right: 1px solid var(--line);
-  color: var(--text); font: inherit; font-size: 12px; padding: 9px 12px; outline: none;
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  padding: 10px;
+  outline: none;
 }
 .hz-add input::placeholder { color: var(--dim); }
-.hz-add input[type="date"] { color: var(--dim); letter-spacing: 0; }
-.hz-add button {
-  background: var(--panel-2); border: 0; color: var(--amber);
-  font: inherit; font-weight: 700; cursor: pointer; letter-spacing: 1px;
-}
-.hz-add button:hover { background: #1c1a14; }
-@media (max-width: 520px) {
-  .hz-add { grid-template-columns: 1fr 46px; }
-  .hz-add input[type="date"] { grid-column: 1 / -1; border-right: 0; border-top: 1px solid var(--line); }
+.hz-add .hz-preview {
+  color: var(--up);
+  font-size: 10px;
+  letter-spacing: 1px;
+  padding-right: 12px;
+  white-space: nowrap;
 }
 
 /* ---------- sober date editor (inline in masthead) ---------- */
