@@ -647,10 +647,14 @@ export default function CommandCenter() {
           <span>PERSONAL DESK</span>
         </div>
         <div className="bar-stats">
-          <div className="bar-stat"><u>DATE</u><b>{dateStr}</b></div>
-          <div className="bar-stat"><u>GREENWICH WX</u><b>{wx ? `${wx.temp}°F ${wx.label}` : '—'}</b></div>
-          <div className="bar-stat"><u>OPEN TODAY</u><b>{openTodos} TASK{openTodos === 1 ? '' : 'S'}</b></div>
-          <div className="bar-stat"><u>HORIZON</u><b>{horizon.length} AHEAD</b></div>
+          <div className="bar-stat date"><u>DATE</u><b>{dateStr}</b></div>
+          <div className="bar-stat now"><u>GREENWICH</u><b>{wx ? `${wx.temp}°F ${wx.label}` : '—'}</b></div>
+          {(wx?.days || []).slice(0, 5).map((day, i) => (
+            <div className="bar-stat fc" key={day.date} title={`${day.date} · ${wmoLabel(day.code)}`}>
+              <u>{i === 0 ? 'TODAY' : new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(parseMid(day.date)).toUpperCase()}</u>
+              <b><WxIcon code={day.code} size={13} />{day.hi}°<i>/{day.lo}°</i></b>
+            </div>
+          ))}
         </div>
         <div className="bar-clock">
           <time>{clock}<span style={{ fontSize: 9, color: 'var(--dim)', letterSpacing: 1 }}> ET</span></time>
@@ -749,17 +753,6 @@ export default function CommandCenter() {
             </div>
           )}
 
-          {wx?.days?.length > 0 && (
-            <div className="wx-forecast">
-              {wx.days.slice(0, 5).map((day, i) => (
-                <span className="fc-cell" key={day.date} title={`${day.date} · ${wmoLabel(day.code)}`}>
-                  <u>{i === 0 ? 'TODAY' : new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(parseMid(day.date)).toUpperCase()}</u>
-                  <WxIcon code={day.code} />
-                  <b>{day.hi}°<i>/{day.lo}°</i></b>
-                </span>
-              ))}
-            </div>
-          )}
 
           {(() => {
             if (!vitals) return null
