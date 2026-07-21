@@ -52,8 +52,8 @@ const WX_LON = -73.6282
 const WX_URL =
   `https://api.open-meteo.com/v1/forecast?latitude=${WX_LAT}&longitude=${WX_LON}` +
   `&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m` +
-  `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset` +
-  `&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America%2FNew_York&forecast_days=1`
+  `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,weather_code` +
+  `&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=America%2FNew_York&forecast_days=5`
 
 /* WMO weather codes -> terse terminal labels */
 const WMO = [
@@ -62,6 +62,53 @@ const WMO = [
   [77, 'SNOW'], [82, 'SHOWERS'], [86, 'SNOW SHOWERS'], [99, 'T-STORM'],
 ]
 const wmoLabel = (code) => (WMO.find(([max]) => code <= max) || [0, '—'])[1]
+
+/* minimal monochrome weather glyphs — amber sun, dim cloud/precip */
+function WxIcon({ code, size = 22 }) {
+  const amber = '#ffab00'
+  const dim = '#7d7565'
+  const s = { width: size, height: size, display: 'block' }
+  const sun = (
+    <g stroke={amber} strokeWidth="1.6" fill="none">
+      <circle cx="12" cy="12" r="4.2" />
+      {[0, 45, 90, 135, 180, 225, 270, 315].map((a) => {
+        const r = (a * Math.PI) / 180
+        return <line key={a} x1={12 + Math.cos(r) * 6.5} y1={12 + Math.sin(r) * 6.5} x2={12 + Math.cos(r) * 8.8} y2={12 + Math.sin(r) * 8.8} />
+      })}
+    </g>
+  )
+  const cloud = (dx = 0, dy = 0) => (
+    <path
+      d={`M ${6 + dx} ${15 + dy} a 3.4 3.4 0 0 1 .4 -6.8 a 4.6 4.6 0 0 1 8.8 -1 a 3.6 3.6 0 0 1 1.4 7.8 z`}
+      stroke={dim} strokeWidth="1.6" fill="none" strokeLinejoin="round"
+    />
+  )
+  let body
+  if (code <= 1) body = sun
+  else if (code === 2) body = (<>
+    <g transform="translate(3.5,-2.5) scale(0.62)">{sun}</g>
+    {cloud(1.5, 4)}
+  </>)
+  else if (code === 3) body = cloud(1.5, 3)
+  else if (code <= 48) body = (
+    <g stroke={dim} strokeWidth="1.6"><line x1="4" y1="9" x2="20" y2="9" /><line x1="6" y1="13" x2="18" y2="13" /><line x1="4" y1="17" x2="20" y2="17" /></g>
+  )
+  else if (code <= 67 || (code >= 80 && code <= 82)) body = (<>
+    {cloud(1.5, 0)}
+    <g stroke={amber} strokeWidth="1.5">
+      <line x1="8" y1="17.5" x2="6.8" y2="21" /><line x1="12.5" y1="17.5" x2="11.3" y2="21" /><line x1="17" y1="17.5" x2="15.8" y2="21" />
+    </g>
+  </>)
+  else if (code <= 77 || code === 85 || code === 86) body = (<>
+    {cloud(1.5, 0)}
+    <g fill={dim}><circle cx="8" cy="19" r="1.1" /><circle cx="12.5" cy="20.5" r="1.1" /><circle cx="17" cy="19" r="1.1" /></g>
+  </>)
+  else body = (<>
+    {cloud(1.5, 0)}
+    <path d="M 12.5 15.5 L 9.5 20 L 12 20 L 10.5 23.5 L 15 18.5 L 12.5 18.5 L 14.5 15.5 Z" fill={amber} stroke="none" />
+  </>)
+  return <svg viewBox="0 0 24 24" style={s} aria-hidden="true">{body}</svg>
+}
 
 /* Schedule from the connected Google Calendar (today). Agent refreshes daily. */
 const seedSchedule = [
@@ -420,6 +467,12 @@ export default function CommandCenter() {
           precip: d.daily.precipitation_probability_max[0],
           sunrise: (d.daily.sunrise[0] || '').slice(11, 16),
           sunset: (d.daily.sunset[0] || '').slice(11, 16),
+          days: (d.daily.time || []).map((t, i) => ({
+            date: t,
+            code: d.daily.weather_code?.[i] ?? 0,
+            hi: Math.round(d.daily.temperature_2m_max[i]),
+            lo: Math.round(d.daily.temperature_2m_min[i]),
+          })),
         })
       } catch { /* keep last reading */ }
     }
@@ -693,6 +746,18 @@ export default function CommandCenter() {
               <span><u>PRECIP</u><b>{wx.precip}%</b></span>
               <span><u>WIND</u><b>{wx.wind} MPH</b></span>
               <span><u>SUN</u><b>{wx.sunrise}–{wx.sunset}</b></span>
+            </div>
+          )}
+
+          {wx?.days?.length > 0 && (
+            <div className="wx-forecast">
+              {wx.days.slice(0, 5).map((day, i) => (
+                <span className="fc-cell" key={day.date} title={`${day.date} · ${wmoLabel(day.code)}`}>
+                  <u>{i === 0 ? 'TODAY' : new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(parseMid(day.date)).toUpperCase()}</u>
+                  <WxIcon code={day.code} />
+                  <b>{day.hi}°<i>/{day.lo}°</i></b>
+                </span>
+              ))}
             </div>
           )}
 

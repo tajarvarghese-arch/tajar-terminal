@@ -585,6 +585,26 @@ td.fd { animation: flashDown 0.9s ease-out; }
 }
 .wx-strip u { text-decoration: none; color: var(--dim); font-size: 8.5px; letter-spacing: 1.2px; }
 .wx-strip b { font-size: 12px; font-weight: 700; letter-spacing: 0.5px; }
+/* 5-day forecast row */
+.wx-forecast {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  border-bottom: 1px solid var(--line);
+  background: #0d0c0a;
+}
+.fc-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px 9px;
+  border-right: 1px solid var(--line);
+}
+.fc-cell:last-child { border-right: 0; }
+.fc-cell u { text-decoration: none; color: var(--dim); font-size: 8.5px; letter-spacing: 1.2px; }
+.fc-cell b { font-size: 11.5px; font-weight: 700; letter-spacing: 0.3px; }
+.fc-cell b i { font-style: normal; color: var(--dim); font-weight: 400; }
+
 .vitals-strip { border-top: 0; }
 .vitals-strip .vit-src { color: var(--amber); }
 .vitals-strip b.muted { color: var(--dim); }
