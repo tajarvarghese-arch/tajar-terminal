@@ -800,6 +800,30 @@ td.fd { animation: flashDown 0.9s ease-out; }
 .log-date { color: var(--amber-dim); font-size: 10px; letter-spacing: 1px; padding-top: 2px; }
 .log-row p { font-size: 12px; line-height: 1.45; color: var(--text); }
 
+/* ---------- VITALS TRACKER ---------- */
+.chart-block { padding: 10px 12px 12px; border-bottom: 1px solid var(--line); }
+.chart-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 7px;
+}
+.chart-label u { text-decoration: none; color: var(--amber); font-size: 9.5px; letter-spacing: 2px; }
+.chart-label span { color: var(--dim); font-size: 10px; letter-spacing: 0.5px; }
+.chart-label span b { color: var(--text); font-weight: 700; }
+.bars {
+  display: grid;
+  grid-template-columns: repeat(28, 1fr);
+  gap: 2px;
+  height: 56px;
+  align-items: end;
+}
+.bars i { display: block; min-height: 2px; }
+.bars.steps i { background: var(--amber); }
+.bars.steps i.cur { background: #ffd570; }
+.bars.ex i { background: var(--up); }
+.bars.ex i.cur { background: #8ff0b6; }
+
 /* ---------- MARKETS strip (collapsed) ---------- */
 .mkt-head { cursor: pointer; }
 .mkt-head .chev { color: var(--dim); font-size: 11px; }

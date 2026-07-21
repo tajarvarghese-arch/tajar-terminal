@@ -7,7 +7,7 @@
 //   GET  /api/health  -> { days: { 'YYYY-MM-DD': { steps, exercise } } }
 
 const KEY = 'tajar-health'
-const KEEP_DAYS = 120
+const KEEP_DAYS = 1095 // three years — enough history to plot real patterns
 
 function env() {
   const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL

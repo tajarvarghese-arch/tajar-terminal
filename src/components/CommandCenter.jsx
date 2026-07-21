@@ -556,6 +556,23 @@ export default function CommandCenter() {
   }
   const delHabit = (id) => setStreaks((s) => ({ ...s, habits: s.habits.filter((h) => h.id !== id) }))
 
+  /* vitals history — last 28 days shaped for the bar tracker */
+  const vitalsHist = useMemo(() => {
+    if (!vitals) return null
+    const series = last28.map((iso) => ({ iso, steps: vitals[iso]?.steps, exercise: vitals[iso]?.exercise }))
+    const stepVals = series.map((d) => d.steps).filter((n) => typeof n === 'number')
+    const exVals = series.map((d) => d.exercise).filter((n) => typeof n === 'number')
+    const logged = series.filter((d) => d.steps != null || d.exercise != null).length
+    const avg = (a) => (a.length ? Math.round(a.reduce((s, n) => s + n, 0) / a.length) : 0)
+    return {
+      series, logged,
+      maxSteps: Math.max(1, ...stepVals),
+      avgSteps: avg(stepVals),
+      maxEx: Math.max(1, ...exVals),
+      avgEx: avg(exVals),
+    }
+  }, [vitals, last28])
+
   /* captain's log — one line per day; saving again overwrites today's line */
   const todayLog = logEntries.find((e) => e.d === todayISO)
   const saveLog = () => {
@@ -861,8 +878,50 @@ export default function CommandCenter() {
           </div>
         </section>
 
+        {/* ---------- VITALS TRACKER ---------- */}
+        {syncKey && (
+          <section className="panel">
+            <div className="panel-head">
+              <h2>VITALS · 28D</h2>
+              <span className="meta">{vitalsHist ? `${vitalsHist.logged} DAYS LOGGED` : 'AWAITING SYNC'}</span>
+            </div>
+            {!vitalsHist || vitalsHist.logged === 0 ? (
+              <div className="agenda-empty">Awaiting pushes — bars appear after tonight&rsquo;s 11:59 PM sync.</div>
+            ) : (
+              <>
+                <div className="chart-block">
+                  <div className="chart-label">
+                    <u>STEPS</u>
+                    <span>AVG <b>{vitalsHist.avgSteps.toLocaleString()}</b> · BEST <b>{vitalsHist.maxSteps.toLocaleString()}</b></span>
+                  </div>
+                  <div className="bars steps">
+                    {vitalsHist.series.map((d) => (
+                      <i key={d.iso} title={`${d.iso} · ${d.steps != null ? d.steps.toLocaleString() + ' steps' : 'no data'}`}
+                        className={d.iso === todayISO ? 'cur' : ''}
+                        style={{ height: d.steps != null ? `${Math.max(6, (d.steps / vitalsHist.maxSteps) * 100)}%` : '2px' }} />
+                    ))}
+                  </div>
+                </div>
+                <div className="chart-block">
+                  <div className="chart-label">
+                    <u>EXERCISE MIN</u>
+                    <span>AVG <b>{vitalsHist.avgEx}</b> · BEST <b>{vitalsHist.maxEx}</b></span>
+                  </div>
+                  <div className="bars ex">
+                    {vitalsHist.series.map((d) => (
+                      <i key={d.iso} title={`${d.iso} · ${d.exercise != null ? d.exercise + ' min' : 'no data'}`}
+                        className={d.iso === todayISO ? 'cur' : ''}
+                        style={{ height: d.exercise != null ? `${Math.max(6, (d.exercise / vitalsHist.maxEx) * 100)}%` : '2px' }} />
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </section>
+        )}
+
         {/* ---------- GROUNDING ---------- */}
-        <section className="panel span-2">
+        <section className={`panel ${syncKey ? '' : 'span-2'}`}>
           <div className="panel-head">
             <h2>GROUNDING</h2>
             <span className="meta">WHY</span>
