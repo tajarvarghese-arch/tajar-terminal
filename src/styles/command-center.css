@@ -648,16 +648,27 @@ td.fd { animation: flashDown 0.9s ease-out; }
 .week-items p.hot { color: var(--amber); }
 .week-items p.hot span { color: var(--amber-dim); }
 
-/* ---------- STREAKS ---------- */
+/* ---------- STREAKS ----------
+   The whole row is the tap target (log today); tiny cells are the
+   visual record, still clickable with a mouse for backfill. */
 .streak-list { padding: 4px 0; }
 .streak-row {
   display: grid;
-  grid-template-columns: 82px 1fr 44px;
+  grid-template-columns: 82px 1fr 22px 40px;
   align-items: center;
   gap: 8px;
+  width: 100%;
+  min-height: 44px;
   padding: 6px 12px;
+  background: none;
+  border: 0;
   border-bottom: 1px solid var(--line);
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
 }
+.streak-row:hover { background: #17150f; }
 .streak-name {
   color: var(--dim);
   font-size: 10px;
@@ -668,6 +679,7 @@ td.fd { animation: flashDown 0.9s ease-out; }
   min-width: 0;
   overflow: hidden;
 }
+.streak-row.done .streak-name { color: var(--text); }
 .streak-del { color: transparent; cursor: pointer; font-size: 11px; }
 .streak-row:hover .streak-del { color: var(--dim-2); }
 .streak-row:hover .streak-del:hover { color: var(--down); }
@@ -678,16 +690,30 @@ td.fd { animation: flashDown 0.9s ease-out; }
   min-width: 0;
 }
 .streak-cells .cell {
+  display: block;
   aspect-ratio: 1;
   width: 100%;
   background: #1a1813;
   border: 1px solid var(--line);
-  cursor: pointer;
   padding: 0;
 }
+@media (hover: hover) { .streak-cells .cell { cursor: pointer; } }
 .streak-cells .cell.on { background: var(--amber); border-color: var(--amber); }
 .streak-cells .cell.today { border-color: var(--amber-dim); }
 .streak-cells .cell.on.today { border-color: #ffd570; }
+.streak-today {
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--line-bright);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--up);
+  font-size: 12px;
+  font-weight: 700;
+  font-style: normal;
+}
+.streak-today.on { border-color: #1c5c39; }
 .streak-count {
   text-align: right;
   color: var(--amber);

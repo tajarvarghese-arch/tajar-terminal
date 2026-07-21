@@ -678,29 +678,33 @@ export default function CommandCenter() {
         <section className="panel">
           <div className="panel-head">
             <h2>STREAKS · 28D</h2>
-            <span className="meta">TAP A CELL TO LOG</span>
+            <span className="meta">TAP A ROW = DONE TODAY</span>
           </div>
           <div className="streak-list">
             {streaks.habits.map((h) => {
               const marked = new Set(streaks.marks[h.id] || [])
+              const doneToday = marked.has(todayISO)
               return (
-                <div className="streak-row" key={h.id}>
-                  <div className="streak-name">
+                <button className={`streak-row ${doneToday ? 'done' : ''}`} key={h.id}
+                  onClick={() => toggleMark(h.id, todayISO)}>
+                  <span className="streak-name">
                     {h.name}
-                    <span className="streak-del" onClick={() => delHabit(h.id)} aria-label="delete">&#10005;</span>
-                  </div>
-                  <div className="streak-cells">
+                    <span className="streak-del"
+                      onClick={(e) => { e.stopPropagation(); delHabit(h.id) }} aria-label="delete">&#10005;</span>
+                  </span>
+                  <span className="streak-cells">
                     {last28.map((iso) => (
-                      <button
+                      <i
                         key={iso}
                         className={`cell ${marked.has(iso) ? 'on' : ''} ${iso === todayISO ? 'today' : ''}`}
-                        onClick={() => toggleMark(h.id, iso)}
+                        onClick={(e) => { e.stopPropagation(); toggleMark(h.id, iso) }}
                         title={iso}
                       />
                     ))}
-                  </div>
-                  <div className="streak-count">{streakCount(h.id)}D</div>
-                </div>
+                  </span>
+                  <span className={`streak-today ${doneToday ? 'on' : ''}`}>{doneToday ? '✓' : ''}</span>
+                  <span className="streak-count">{streakCount(h.id)}D</span>
+                </button>
               )
             })}
           </div>
