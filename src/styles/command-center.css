@@ -482,6 +482,33 @@ td.fd { animation: flashDown 0.9s ease-out; }
 
 .data-note { color: var(--dim); font-size: 9.5px; letter-spacing: 0.5px; }
 
+/* sync control */
+.sync-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 1px solid var(--line-bright);
+  color: var(--dim);
+  font: inherit;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+.sync-chip .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.sync-chip.ok { color: var(--up); border-color: #1c5c39; }
+.sync-chip.err { color: var(--down); border-color: #6b241f; }
+.sync-edit { display: inline-flex; gap: 6px; }
+.sync-edit input {
+  background: #060504; border: 1px solid var(--line-bright); color: var(--text);
+  font: inherit; font-size: 11px; padding: 5px 8px; outline: none; width: 160px;
+}
+.sync-edit button {
+  background: var(--panel-2); border: 1px solid var(--line-bright); color: var(--amber);
+  font: inherit; font-size: 10px; letter-spacing: 1px; padding: 0 10px; cursor: pointer;
+}
+
 /* ============================================================
    LIFE TERMINAL modules
    ============================================================ */

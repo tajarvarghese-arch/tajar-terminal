@@ -40,6 +40,8 @@ const K = {
   mkt: 'tajar-markets-open',
   streaks: 'tajar-streaks',
   log: 'tajar-captains-log',
+  syncKey: 'tajar-sync-key',
+  updated: 'tajar-updated-at',
 }
 
 const DEFAULT_SOBER = '2025-10-09'
@@ -263,6 +265,12 @@ export default function CommandCenter() {
   const [logEntries, setLogEntries] = useState(() => load(K.log, []))
   const [logDraft, setLogDraft] = useState('')
   const [wire, setWire] = useState([])
+  const [syncKey, setSyncKey] = useState(() => loadStr(K.syncKey, ''))
+  const [syncStatus, setSyncStatus] = useState('off') // off | ok | err
+  const [editSync, setEditSync] = useState(false)
+  const [syncDraft, setSyncDraft] = useState('')
+  const applyingRef = useRef(false)
+  const pushTimer = useRef(null)
 
   /* clock */
   useEffect(() => {
@@ -295,6 +303,85 @@ export default function CommandCenter() {
     const id = setInterval(pull, 300000)
     return () => { alive = false; clearInterval(id) }
   }, [])
+
+  /* ---------- cloud sync (Upstash via /api/state) ----------
+     localStorage stays the offline cache; the server copy survives
+     domain changes, re-installs, and new devices. Last write wins. */
+  const applyRemote = (d) => {
+    applyingRef.current = true
+    if (d.soberStart) setSoberStart(d.soberStart)
+    if (typeof d.focus === 'string') setFocus(d.focus)
+    if (Array.isArray(d.todos)) setTodos(d.todos)
+    if (Array.isArray(d.horizon)) setHorizon(d.horizon)
+    if (Array.isArray(d.reasons)) setReasons(d.reasons)
+    if (d.streaks?.habits) setStreaks(d.streaks)
+    if (Array.isArray(d.logEntries)) setLogEntries(d.logEntries)
+  }
+
+  const snapshot = () => ({
+    soberStart, focus, todos, horizon, reasons, streaks, logEntries,
+  })
+
+  /* pull once per key change */
+  useEffect(() => {
+    if (!syncKey) { setSyncStatus('off'); return }
+    let alive = true
+    ;(async () => {
+      try {
+        const res = await fetch('/api/state', { headers: { 'x-sync-key': syncKey } })
+        if (!alive) return
+        if (res.status === 401) { setSyncStatus('err'); return }
+        if (!res.ok) { setSyncStatus('err'); return }
+        const body = await res.json()
+        const localUpdated = Number(loadStr(K.updated, '0')) || 0
+        if (body?.data && (body.updatedAt || 0) > localUpdated) {
+          applyRemote(body.data)
+          try { localStorage.setItem(K.updated, String(body.updatedAt)) } catch {}
+        } else {
+          // local is newer (or server empty) — seed the server
+          await fetch('/api/state', {
+            method: 'PUT',
+            headers: { 'x-sync-key': syncKey, 'content-type': 'application/json' },
+            body: JSON.stringify({ data: snapshot(), updatedAt: localUpdated || Date.now() }),
+          })
+        }
+        setSyncStatus('ok')
+      } catch {
+        if (alive) setSyncStatus('err')
+      }
+    })()
+    return () => { alive = false }
+  }, [syncKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* debounced push on any personal-state change */
+  useEffect(() => {
+    if (!syncKey) return
+    if (applyingRef.current) { applyingRef.current = false; return }
+    const updatedAt = Date.now()
+    try { localStorage.setItem(K.updated, String(updatedAt)) } catch {}
+    clearTimeout(pushTimer.current)
+    pushTimer.current = setTimeout(async () => {
+      try {
+        const res = await fetch('/api/state', {
+          method: 'PUT',
+          headers: { 'x-sync-key': syncKey, 'content-type': 'application/json' },
+          body: JSON.stringify({ data: snapshot(), updatedAt }),
+        })
+        setSyncStatus(res.ok ? 'ok' : 'err')
+      } catch {
+        setSyncStatus('err')
+      }
+    }, 1500)
+    return () => clearTimeout(pushTimer.current)
+  }, [soberStart, focus, todos, horizon, reasons, streaks, logEntries]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const saveSyncKey = () => {
+    const k = syncDraft.trim()
+    setEditSync(false); setSyncDraft('')
+    if (!k) return
+    try { localStorage.setItem(K.syncKey, JSON.stringify(k)) } catch {}
+    setSyncKey(k)
+  }
 
   /* weather — Open-Meteo direct from the browser, refreshed every 15 min */
   useEffect(() => {
@@ -825,9 +912,26 @@ export default function CommandCenter() {
       {/* ---------- FOOTER ---------- */}
       <footer className="term-foot">
         <span className="data-note">
-          PRIVATE · STORED ON THIS DEVICE · QUOTES {live ? 'LIVE (YAHOO)' : 'SNAPSHOT'}
+          {syncStatus === 'ok' ? 'PRIVATE · SYNCED TO YOUR CLOUD STORE' : 'PRIVATE · STORED ON THIS DEVICE'}
+          {' · QUOTES '}{live ? 'LIVE (YAHOO)' : 'SNAPSHOT'}
         </span>
-        <span className="data-note">TAJAR TERMINAL</span>
+        {editSync ? (
+          <span className="sync-edit">
+            <input
+              autoFocus type="password" value={syncDraft}
+              onChange={(e) => setSyncDraft(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && saveSyncKey()}
+              placeholder="SYNC KEY"
+            />
+            <button onClick={saveSyncKey}>SET</button>
+          </span>
+        ) : (
+          <button className={`sync-chip ${syncStatus}`} onClick={() => setEditSync(true)}
+            title="Cloud sync — tap to set your sync key">
+            <i className="dot" />
+            SYNC {syncStatus === 'ok' ? 'ON' : syncStatus === 'err' ? 'ERR' : 'OFF'}
+          </button>
+        )}
       </footer>
     </div>
   )
