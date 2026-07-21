@@ -397,7 +397,7 @@ export default function CommandCenter() {
       } catch { /* strip simply stays hidden */ }
     }
     pull()
-    const id = setInterval(pull, 1800000)
+    const id = setInterval(pull, 300000)
     return () => { alive = false; clearInterval(id) }
   }, [syncKey])
 
