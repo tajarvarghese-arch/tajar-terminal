@@ -19,6 +19,40 @@ function env() {
 const todayET = () =>
   new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date())
 
+/* Accept two payload shapes, returning { 'YYYY-MM-DD': { steps?, exercise? } }:
+   1. Simple (iOS Shortcuts): { date?, steps?, exercise? }
+   2. Health Auto Export app: { data: { metrics: [{ name, data: [{ date, qty }] }] } }
+      — HAE reads HealthKit's statistics engine, so its numbers match
+      the Health app exactly. */
+export function parseHealthPayload(body, fallbackDate) {
+  const updates = {}
+  if (Array.isArray(body?.data?.metrics)) {
+    const nameMap = {
+      step_count: 'steps', steps: 'steps',
+      apple_exercise_time: 'exercise', exercise_time: 'exercise', exercise_minutes: 'exercise',
+    }
+    for (const metric of body.data.metrics) {
+      const field = nameMap[String(metric?.name || '').toLowerCase()]
+      if (!field || !Array.isArray(metric.data)) continue
+      for (const point of metric.data) {
+        const date = String(point?.date || '').slice(0, 10)
+        const qty = Number(point?.qty)
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(qty) || qty < 0) continue
+        ;(updates[date] ||= {})[field] = Math.round(qty)
+      }
+    }
+  } else {
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(body.date || '') ? body.date : fallbackDate
+    const steps = Number(body.steps)
+    const exercise = Number(body.exercise ?? body.exerciseMinutes)
+    const entry = {}
+    if (Number.isFinite(steps) && steps >= 0) entry.steps = Math.round(steps)
+    if (Number.isFinite(exercise) && exercise >= 0) entry.exercise = Math.round(exercise)
+    if (Object.keys(entry).length) updates[date] = entry
+  }
+  return updates
+}
+
 async function redis(url, token, path, body) {
   const r = await fetch(`${url}${path}`, {
     method: body === undefined ? 'GET' : 'POST',
@@ -54,27 +88,25 @@ export default async function handler(req, res) {
       res.status(400).json({ error: 'bad payload' })
       return
     }
-    const date = /^\d{4}-\d{2}-\d{2}$/.test(body.date || '') ? body.date : todayET()
-    const steps = Number(body.steps)
-    const exercise = Number(body.exercise ?? body.exerciseMinutes)
-    const entry = {}
-    if (Number.isFinite(steps) && steps >= 0) entry.steps = Math.round(steps)
-    if (Number.isFinite(exercise) && exercise >= 0) entry.exercise = Math.round(exercise)
-    if (!Object.keys(entry).length) {
+
+    const updates = parseHealthPayload(body, todayET())
+    if (!Object.keys(updates).length) {
       res.status(400).json({ error: 'no usable metrics' })
       return
     }
 
     const { result } = await redis(url, token, `/get/${KEY}`)
     const blob = result ? JSON.parse(result) : { days: {} }
-    blob.days[date] = { ...blob.days[date], ...entry, ts: Date.now() }
+    for (const [date, entry] of Object.entries(updates)) {
+      blob.days[date] = { ...blob.days[date], ...entry, ts: Date.now() }
+    }
 
     // trim history
     const keys = Object.keys(blob.days).sort()
     while (keys.length > KEEP_DAYS) delete blob.days[keys.shift()]
 
     await redis(url, token, `/set/${KEY}`, JSON.stringify(blob))
-    res.status(200).json({ ok: true, date, saved: entry })
+    res.status(200).json({ ok: true, saved: updates })
     return
   }
 
