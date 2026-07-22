@@ -137,6 +137,14 @@
   white-space: nowrap;
 }
 .bar-stat.fc b i { font-style: normal; color: var(--dim); font-weight: 400; }
+.bar-stat.vit { min-width: 0; padding: 6px 10px; }
+.bar-stat.vit b {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  white-space: nowrap;
+}
 
 .bar-clock {
   padding: 10px 14px;
@@ -179,6 +187,9 @@
   .bar-stat.date { border-bottom: 1px solid var(--line); }
   .bar-stat.fc { padding: 6px 8px; align-items: center; }
   .bar-stat.fc:last-child { border-right: 0; }
+  .bar-stat.vit { border-top: 1px solid var(--line); }
+  .bar-stat.vit-steps { grid-column: span 2; }
+  .bar-stat.vit-ex { grid-column: span 3; border-right: 0; }
   .bar-clock { border-left: 0; justify-content: space-between; }
 }
 

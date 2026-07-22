@@ -119,6 +119,30 @@ function WxIcon({ code, size = 22 }) {
   return <svg viewBox="0 0 24 24" style={s} aria-hidden="true">{body}</svg>
 }
 
+/* tiny vitals glyphs — health green, sized for the masthead */
+const VIT_GREEN = '#3ddc84'
+function StepsIcon({ size = 12 }) {
+  return (
+    <svg viewBox="0 0 24 24" style={{ width: size, height: size, display: 'block' }} aria-hidden="true">
+      <g stroke={VIT_GREEN} strokeWidth="1.8" fill="none">
+        <ellipse cx="8" cy="8" rx="3" ry="5" transform="rotate(-14 8 8)" />
+        <ellipse cx="16" cy="16" rx="3" ry="5" transform="rotate(-14 16 16)" />
+      </g>
+    </svg>
+  )
+}
+function ExIcon({ size = 12 }) {
+  return (
+    <svg viewBox="0 0 24 24" style={{ width: size, height: size, display: 'block' }} aria-hidden="true">
+      <g stroke={VIT_GREEN} strokeWidth="1.8" fill="none">
+        <line x1="7" y1="12" x2="17" y2="12" />
+        <rect x="3" y="7.5" width="3.4" height="9" />
+        <rect x="17.6" y="7.5" width="3.4" height="9" />
+      </g>
+    </svg>
+  )
+}
+
 /* Schedule from the connected Google Calendar. SCHEDULE_FOR stamps the
    day it was synced for — past that date the panel says so instead of
    showing another day's events as today's. Agent refreshes both daily. */
@@ -504,7 +528,7 @@ export default function CommandCenter() {
         const res = await fetch('/api/calendar', { headers: { 'x-sync-key': syncKey } })
         if (!res.ok) throw new Error('no calendar api')
         const body = await res.json()
-        if (alive && body?.days) { setCalDays(body.days); setCalTs(body.ts) }
+        if (alive && body?.days) { setCalDays(body.days); setCalTs(body.ts || Date.now()) }
       } catch { /* seeds + freshness guard remain the fallback */ }
     }
     pull()
@@ -721,7 +745,11 @@ export default function CommandCenter() {
 
   const mdShort = (iso) =>
     new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit' }).format(parseMid(iso)).toUpperCase()
-  const hmOf = (ts) => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(ts))
+  const hmOf = (ts) => {
+    const d = new Date(ts)
+    if (Number.isNaN(d.getTime())) return '—'
+    return new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: false }).format(d)
+  }
   const weekMeta = calDays
     ? `LIVE · SYNCED ${hmOf(calTs)}`
     : weekRows.length
@@ -803,6 +831,27 @@ export default function CommandCenter() {
               <b><WxIcon code={day.code} size={13} />{day.hi}°<i>/{day.lo}°</i></b>
             </div>
           ))}
+          {(() => {
+            if (!vitals) return null
+            const ydaISO = isoOf(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1))
+            const v = vitals[todayISO] || vitals[ydaISO]
+            if (!v) return null
+            const yda = !vitals[todayISO]
+            return (<>
+              {v.steps != null && (
+                <div className="bar-stat vit vit-steps" title={yda ? 'Yesterday — today syncs at your next push' : 'Today, as of last push'}>
+                  <u>STEPS{yda ? ' · YDA' : ''}</u>
+                  <b><StepsIcon />{v.steps.toLocaleString()}</b>
+                </div>
+              )}
+              {v.exercise != null && (
+                <div className="bar-stat vit vit-ex" title={yda ? 'Yesterday — today syncs at your next push' : 'Today, as of last push'}>
+                  <u>EXERCISE{yda ? ' · YDA' : ''}</u>
+                  <b><ExIcon />{v.exercise} MIN</b>
+                </div>
+              )}
+            </>)
+          })()}
         </div>
         <div className="bar-clock">
           <time>{clock}<span style={{ fontSize: 9, color: 'var(--dim)', letterSpacing: 1 }}> ET</span></time>
