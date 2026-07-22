@@ -3,8 +3,10 @@ import '../styles/command-center.css'
 
 /* ============================================================
    TAJAR TERMINAL — a life terminal in a brutalist Bloomberg skin.
-   Order of attention: TODAY -> HORIZON -> SOBRIETY -> GROUNDING -> MARKETS.
-   All personal data lives in localStorage on this device only.
+   TODAY -> WEEK -> HORIZON -> STREAKS -> LOG -> GROUNDING -> MARKETS.
+   Personal state: localStorage cache + private cloud store (/api/state).
+   Calendar/position seeds are stamped with their sync date and the UI
+   refuses to present them as current once that date has passed.
    ============================================================ */
 
 /* ---------- PORTFOLIO SEED (demoted to a strip) ---------- */
@@ -117,36 +119,39 @@ function WxIcon({ code, size = 22 }) {
   return <svg viewBox="0 0 24 24" style={s} aria-hidden="true">{body}</svg>
 }
 
-/* Schedule from the connected Google Calendar (today). Agent refreshes daily. */
+/* Schedule from the connected Google Calendar. SCHEDULE_FOR stamps the
+   day it was synced for — past that date the panel says so instead of
+   showing another day's events as today's. Agent refreshes both daily. */
+const SCHEDULE_FOR = '2026-07-21'
 const seedSchedule = [
   { start: '10:15', end: '11:15', title: 'Piano Lesson', note: 'w/ Candida Borges · protect 15 min warm-up' },
 ]
 
-/* Week ahead — pulled from the connected Google Calendar (Jul 22–28). */
+/* Week ahead — each row carries its real date so stale days drop off. */
 const seedWeek = [
-  { day: 'WED', date: '22', items: [
+  { iso: '2026-07-22', day: 'WED', date: '22', items: [
     { t: '07:00', s: 'GMG meeting' },
     { t: '08:00', s: 'Encon maintenance' },
     { t: '14:30', s: 'QSBS gut-check · Citrin Cooperman', hot: true },
   ]},
-  { day: 'THU', date: '23', items: [
+  { iso: '2026-07-23', day: 'THU', date: '23', items: [
     { t: '07:00', s: 'Sight-read mazurka ×2' },
   ]},
-  { day: 'FRI', date: '24', items: [
+  { iso: '2026-07-24', day: 'FRI', date: '24', items: [
     { t: '07:00', s: 'Sight-read mazurka ×2' },
   ]},
-  { day: 'SAT', date: '25', items: [
+  { iso: '2026-07-25', day: 'SAT', date: '25', items: [
     { t: '07:00', s: 'Sight-read mazurka ×2' },
     { t: '14:00', s: 'The Odyssey — IMAX · Port Chester' },
   ]},
-  { day: 'SUN', date: '26', items: [
+  { iso: '2026-07-26', day: 'SUN', date: '26', items: [
     { t: '07:00', s: 'Sight-read mazurka ×2' },
   ]},
-  { day: 'MON', date: '27', items: [
+  { iso: '2026-07-27', day: 'MON', date: '27', items: [
     { t: '07:00', s: 'Greenwich Central Men’s Meeting' },
     { t: '15:00', s: 'Kevin Trexler + Matt Sirovich', hot: true },
   ]},
-  { day: 'TUE', date: '28', items: [
+  { iso: '2026-07-28', day: 'TUE', date: '28', items: [
     { t: '09:15', s: 'Coffee w/ Tim Coleman · CFCF' },
     { t: '10:15', s: 'Piano Lesson' },
     { t: '14:30', s: 'Ben’s oral surgery consult · Stamford' },
@@ -299,7 +304,6 @@ export default function CommandCenter() {
   const [book, setBook] = useState(seedBook)
   const [live, setLive] = useState(false)
   const [mktOpen, setMktOpen] = useState(() => load(K.mkt, false))
-  const prevPx = useRef(Object.fromEntries(seedBook.map((p) => [p.sym, p.last])))
 
   /* life state */
   const [soberStart, setSoberStart] = useState(() => loadStr(K.sober, DEFAULT_SOBER))
@@ -389,7 +393,11 @@ export default function CommandCenter() {
      localStorage stays the offline cache; the server copy survives
      domain changes, re-installs, and new devices. Last write wins. */
   const applyRemote = (d) => {
+    /* Suppress the push-back echo with a time window, not a consume-flag:
+       if every setter below happens to bail (values identical), a consumed
+       flag would swallow the user's NEXT real edit instead. */
     applyingRef.current = true
+    setTimeout(() => { applyingRef.current = false }, 100)
     if (d.soberStart) setSoberStart(d.soberStart)
     if (typeof d.focus === 'string') setFocus(d.focus)
     if (Array.isArray(d.todos)) setTodos(d.todos)
@@ -437,7 +445,7 @@ export default function CommandCenter() {
   /* debounced push on any personal-state change */
   useEffect(() => {
     if (!syncKey) return
-    if (applyingRef.current) { applyingRef.current = false; return }
+    if (applyingRef.current) return
     const updatedAt = Date.now()
     try { localStorage.setItem(K.updated, String(updatedAt)) } catch {}
     clearTimeout(pushTimer.current)
@@ -564,7 +572,6 @@ export default function CommandCenter() {
           cur.map((p) => {
             const q = data.quotes[p.yh]
             if (!q || typeof q.price !== 'number') return p
-            prevPx.current[p.sym] = q.price
             return { ...p, last: q.price, prevClose: typeof q.prevClose === 'number' ? q.prevClose : p.prevClose }
           })
         )
@@ -649,6 +656,16 @@ export default function CommandCenter() {
   /* streaks */
   const isoOf = (d) => new Intl.DateTimeFormat('en-CA').format(d)
   const todayISO = isoOf(now)
+
+  /* calendar freshness — never present a stale sync as current data */
+  const scheduleFresh = todayISO === SCHEDULE_FOR
+  const todaySchedule = scheduleFresh ? seedSchedule : []
+  const weekRemaining = seedWeek.filter((d) => d.iso > todayISO)
+  const mdShort = (iso) =>
+    new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit' }).format(parseMid(iso)).toUpperCase()
+  const weekMeta = weekRemaining.length
+    ? `${mdShort(weekRemaining[0].iso)} – ${mdShort(weekRemaining[weekRemaining.length - 1].iso)} · SYNCED`
+    : 'AWAITING SYNC'
   const last28 = useMemo(() => {
     return [...Array(28)].map((_, i) => isoOf(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 27 + i)))
   }, [todayISO]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -774,7 +791,7 @@ export default function CommandCenter() {
               {wire.length === 0 && (
                 <span className="tape-item">
                   <b>WIRE</b>
-                  <span className="px">Headlines go live on deploy — /api/news feeds this tape from your holdings</span>
+                  <span className="px">Awaiting headlines</span>
                 </span>
               )}
             </span>
@@ -787,7 +804,7 @@ export default function CommandCenter() {
         <section className="panel span-2">
           <div className="panel-head">
             <h2>TODAY · {dateStr}</h2>
-            <span className="meta">{seedSchedule.length} EVENT{seedSchedule.length === 1 ? '' : 'S'} · <b>{openTodos}</b> TO DO</span>
+            <span className="meta">{todaySchedule.length} EVENT{todaySchedule.length === 1 ? '' : 'S'} · <b>{openTodos}</b> TO DO</span>
           </div>
 
           <div className="focus">
@@ -854,8 +871,13 @@ export default function CommandCenter() {
           })()}
 
           <div className="agenda">
-            {seedSchedule.length === 0 && <div className="agenda-empty">No commitments today. Clear board.</div>}
-            {seedSchedule.map((e, i) => {
+            {!scheduleFresh && (
+              <div className="agenda-empty">
+                Calendar not synced for today — last sync {fmtDate(SCHEDULE_FOR)}. The morning refresh will update it.
+              </div>
+            )}
+            {scheduleFresh && todaySchedule.length === 0 && <div className="agenda-empty">No commitments today. Clear board.</div>}
+            {todaySchedule.map((e, i) => {
               const active = nowHM >= e.start && nowHM < e.end
               return (
                 <div className="agenda-row" key={i}>
@@ -894,10 +916,13 @@ export default function CommandCenter() {
         <section className="panel">
           <div className="panel-head">
             <h2>WEEK AHEAD</h2>
-            <span className="meta">JUL 22–28 · SYNCED</span>
+            <span className="meta">{weekMeta}</span>
           </div>
           <div className="week-list">
-            {seedWeek.map((d) => (
+            {weekRemaining.length === 0 && (
+              <div className="agenda-empty">Week not synced — awaiting the morning refresh.</div>
+            )}
+            {weekRemaining.map((d) => (
               <div className="week-row" key={d.day}>
                 <div className="week-day"><b>{d.day}</b><small>{d.date}</small></div>
                 <div className="week-items">
@@ -1100,7 +1125,8 @@ export default function CommandCenter() {
           <div className="panel-head mkt-head" onClick={() => setMktOpen((v) => !v)}>
             <h2>MARKETS</h2>
             <span className="meta">
-              NETLIQ <b>{usdShort(mkt.netLiq)}</b> · <span className={cls(mkt.dayPnl)}>{pct(mkt.dayPct)}</span>
+              <span className={`mkt ${marketStatus.open ? 'open' : 'closed'}`}><i className="dot" />{marketStatus.label}</span>
+              {' '}· NETLIQ <b>{usdShort(mkt.netLiq)}</b> · <span className={cls(mkt.dayPnl)}>{pct(mkt.dayPct)}</span>
               <span className="chev"> &nbsp;{mktOpen ? '▲ HIDE' : '▼ BOOK'}</span>
             </span>
           </div>

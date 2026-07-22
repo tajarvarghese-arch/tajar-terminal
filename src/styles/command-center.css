@@ -18,8 +18,6 @@
   --down: #ff453a;
   --up-bg: rgba(61, 220, 132, 0.10);
   --down-bg: rgba(255, 69, 58, 0.10);
-  --flash-up: rgba(61, 220, 132, 0.32);
-  --flash-down: rgba(255, 69, 58, 0.32);
 }
 
 * { font-family: inherit; }
@@ -324,11 +322,6 @@ td.sym small { display: block; color: var(--dim); font-size: 9.5px; letter-spaci
 .neg { color: var(--down); }
 .muted { color: var(--dim); }
 
-/* cell flash on real quote change */
-@keyframes flashUp { from { background: var(--flash-up); } to { background: transparent; } }
-@keyframes flashDown { from { background: var(--flash-down); } to { background: transparent; } }
-td.fu { animation: flashUp 0.9s ease-out; }
-td.fd { animation: flashDown 0.9s ease-out; }
 
 /* ---------- NEWS / TAPE ---------- */
 .news-list { display: flex; flex-direction: column; }
