@@ -327,6 +327,8 @@ export default function CommandCenter() {
   const [logDraft, setLogDraft] = useState('')
   const [wire, setWire] = useState([])
   const [vitals, setVitals] = useState(null)
+  const [calDays, setCalDays] = useState(null)
+  const [calTs, setCalTs] = useState(null)
   const [syncKey, setSyncKey] = useState(() => loadStr(K.syncKey, ''))
   const [syncStatus, setSyncStatus] = useState('off') // off | ok | err
   const [editSync, setEditSync] = useState(false)
@@ -489,6 +491,27 @@ export default function CommandCenter() {
     pull()
     const id = setInterval(pull, 300000)
     return () => { alive = false; clearInterval(id) }
+  }, [syncKey])
+
+  /* live calendar — Google secret iCal feed via /api/calendar.
+     Pulled on load, every 15 min, and every time the app returns to the
+     foreground — so the schedule is synced whenever the app is opened. */
+  useEffect(() => {
+    if (!syncKey) { setCalDays(null); return }
+    let alive = true
+    async function pull() {
+      try {
+        const res = await fetch('/api/calendar', { headers: { 'x-sync-key': syncKey } })
+        if (!res.ok) throw new Error('no calendar api')
+        const body = await res.json()
+        if (alive && body?.days) { setCalDays(body.days); setCalTs(body.ts) }
+      } catch { /* seeds + freshness guard remain the fallback */ }
+    }
+    pull()
+    const id = setInterval(pull, 900000)
+    const onVisible = () => { if (document.visibilityState === 'visible') pull() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => { alive = false; clearInterval(id); document.removeEventListener('visibilitychange', onVisible) }
   }, [syncKey])
 
   /* tides — NOAA Cos Cob Harbor, refreshed every 6 h (predictions are static) */
@@ -659,15 +682,37 @@ export default function CommandCenter() {
   const isoOf = (d) => new Intl.DateTimeFormat('en-CA').format(d)
   const todayISO = isoOf(now)
 
-  /* calendar freshness — never present a stale sync as current data */
+  /* calendar freshness — live feed first, date-stamped seeds as fallback,
+     and never present a stale sync as current data */
+  const liveToday = calDays
+    ? (calDays[todayISO] || []).map((i) => ({ start: i.t, end: i.e, title: i.s, note: i.loc }))
+    : null
   const scheduleFresh = todayISO === SCHEDULE_FOR
-  const todaySchedule = scheduleFresh ? seedSchedule : []
-  const weekRemaining = seedWeek.filter((d) => d.iso > todayISO)
+  const todaySchedule = liveToday ?? (scheduleFresh ? seedSchedule : [])
+  const calOK = liveToday != null || scheduleFresh
+
+  const weekRows = useMemo(() => {
+    if (!calDays) return seedWeek.filter((d) => d.iso > todayISO)
+    return [...Array(7)].map((_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1 + i)
+      const iso = isoOf(d)
+      return {
+        iso,
+        day: new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(d).toUpperCase(),
+        date: String(d.getDate()),
+        items: (calDays[iso] || []).map((it) => ({ t: it.t, s: it.s })),
+      }
+    }).filter((r) => r.items.length)
+  }, [calDays, todayISO]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const mdShort = (iso) =>
     new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit' }).format(parseMid(iso)).toUpperCase()
-  const weekMeta = weekRemaining.length
-    ? `${mdShort(weekRemaining[0].iso)} – ${mdShort(weekRemaining[weekRemaining.length - 1].iso)} · SYNCED`
-    : 'AWAITING SYNC'
+  const hmOf = (ts) => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(ts))
+  const weekMeta = calDays
+    ? `LIVE · SYNCED ${hmOf(calTs)}`
+    : weekRows.length
+      ? `${mdShort(weekRows[0].iso)} – ${mdShort(weekRows[weekRows.length - 1].iso)} · SYNCED`
+      : 'AWAITING SYNC'
   const last28 = useMemo(() => {
     return [...Array(28)].map((_, i) => isoOf(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 27 + i)))
   }, [todayISO]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -873,12 +918,12 @@ export default function CommandCenter() {
           })()}
 
           <div className="agenda">
-            {!scheduleFresh && (
+            {!calOK && (
               <div className="agenda-empty">
                 Calendar not synced for today — last sync {fmtDate(SCHEDULE_FOR)}. The morning refresh will update it.
               </div>
             )}
-            {scheduleFresh && todaySchedule.length === 0 && <div className="agenda-empty">No commitments today. Clear board.</div>}
+            {calOK && todaySchedule.length === 0 && <div className="agenda-empty">No commitments today. Clear board.</div>}
             {todaySchedule.map((e, i) => {
               const active = nowHM >= e.start && nowHM < e.end
               return (
@@ -921,10 +966,10 @@ export default function CommandCenter() {
             <span className="meta">{weekMeta}</span>
           </div>
           <div className="week-list">
-            {weekRemaining.length === 0 && (
+            {weekRows.length === 0 && (
               <div className="agenda-empty">Week not synced — awaiting the morning refresh.</div>
             )}
-            {weekRemaining.map((d) => (
+            {weekRows.map((d) => (
               <div className="week-row" key={d.day}>
                 <div className="week-day"><b>{d.day}</b><small>{d.date}</small></div>
                 <div className="week-items">
