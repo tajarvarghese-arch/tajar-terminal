@@ -685,7 +685,7 @@ export default function CommandCenter() {
   /* calendar freshness — live feed first, date-stamped seeds as fallback,
      and never present a stale sync as current data */
   const liveToday = calDays
-    ? (calDays[todayISO] || []).map((i) => ({ start: i.t, end: i.e, title: i.s, note: i.loc }))
+    ? (calDays[todayISO] || []).map((i) => ({ start: i.t, end: i.e, title: i.s, note: i.loc, cal: i.cal }))
     : null
   const scheduleFresh = todayISO === SCHEDULE_FOR
   const todaySchedule = liveToday ?? (scheduleFresh ? seedSchedule : [])
@@ -700,7 +700,7 @@ export default function CommandCenter() {
         iso,
         day: new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(d).toUpperCase(),
         date: String(d.getDate()),
-        items: (calDays[iso] || []).map((it) => ({ t: it.t, s: it.s })),
+        items: (calDays[iso] || []).map((it) => ({ t: it.t, s: it.s, cal: it.cal })),
       }
     }).filter((r) => r.items.length)
   }, [calDays, todayISO]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -930,7 +930,7 @@ export default function CommandCenter() {
                 <div className="agenda-row" key={i}>
                   <div className="agenda-time">{e.start}<small>{e.end}</small></div>
                   <div className="agenda-body">
-                    <h3>{e.title}</h3>
+                    <h3>{e.title}{e.cal && <span className="cal-tag">{e.cal}</span>}</h3>
                     {e.note && <p>{e.note}</p>}
                     {active && <span className="now">&#9679; NOW</span>}
                   </div>
@@ -975,7 +975,7 @@ export default function CommandCenter() {
                 <div className="week-items">
                   {d.items.map((it, i) => (
                     <p key={i} className={it.hot ? 'hot' : ''}>
-                      <span>{it.t}</span> {it.s}
+                      <span>{it.t}</span> {it.s}{it.cal && <span className="cal-tag">{it.cal}</span>}
                     </p>
                   ))}
                 </div>
