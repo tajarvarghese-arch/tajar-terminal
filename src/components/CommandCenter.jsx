@@ -420,6 +420,16 @@ export default function CommandCenter() {
   /* ---------- cloud sync (Upstash via /api/state) ----------
      localStorage stays the offline cache; the server copy survives
      domain changes, re-installs, and new devices. Last write wins. */
+  /* Log entries merge by date instead of last-write-wins: a line written
+     on one device must survive any other device syncing afterwards.
+     `a` wins when both blobs hold the same date. */
+  const mergeLogs = (a = [], b = []) => {
+    const m = new Map()
+    for (const e of b) if (e?.d) m.set(e.d, e)
+    for (const e of a) if (e?.d) m.set(e.d, e)
+    return [...m.values()].sort((x, y) => y.d.localeCompare(x.d))
+  }
+
   const applyRemote = (d) => {
     /* Suppress the push-back echo with a time window, not a consume-flag:
        if every setter below happens to bail (values identical), a consumed
@@ -432,7 +442,7 @@ export default function CommandCenter() {
     if (Array.isArray(d.horizon)) setHorizon(d.horizon)
     if (Array.isArray(d.reasons)) setReasons(d.reasons)
     if (d.streaks?.habits) setStreaks(d.streaks)
-    if (Array.isArray(d.logEntries)) setLogEntries(d.logEntries)
+    if (Array.isArray(d.logEntries)) setLogEntries((cur) => mergeLogs(d.logEntries, cur))
   }
 
   const snapshot = () => ({
@@ -455,11 +465,18 @@ export default function CommandCenter() {
           applyRemote(body.data)
           try { localStorage.setItem(K.updated, String(body.updatedAt)) } catch {}
         } else {
-          // local is newer (or server empty) — seed the server
+          // local is newer (or server empty) — seed the server, but never
+          // discard log entries the server has and this device doesn't
+          const mergedLogs = mergeLogs(logEntries, body?.data?.logEntries || [])
+          if (mergedLogs.length !== logEntries.length) {
+            applyingRef.current = true
+            setTimeout(() => { applyingRef.current = false }, 100)
+            setLogEntries(mergedLogs)
+          }
           await fetch('/api/state', {
             method: 'PUT',
             headers: { 'x-sync-key': syncKey, 'content-type': 'application/json' },
-            body: JSON.stringify({ data: snapshot(), updatedAt: localUpdated || Date.now() }),
+            body: JSON.stringify({ data: { ...snapshot(), logEntries: mergedLogs }, updatedAt: localUpdated || Date.now() }),
           })
         }
         setSyncStatus('ok')
@@ -831,29 +848,30 @@ export default function CommandCenter() {
               <b><WxIcon code={day.code} size={13} />{day.hi}°<i>/{day.lo}°</i></b>
             </div>
           ))}
+        </div>
+        <div className="bar-clock">
           {(() => {
             if (!vitals) return null
             const ydaISO = isoOf(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1))
             const v = vitals[todayISO] || vitals[ydaISO]
             if (!v) return null
             const yda = !vitals[todayISO]
-            return (<>
-              {v.steps != null && (
-                <div className="bar-stat vit vit-steps" title={yda ? 'Yesterday — today syncs at your next push' : 'Today, as of last push'}>
-                  <u>STEPS{yda ? ' · YDA' : ''}</u>
-                  <b><StepsIcon />{v.steps.toLocaleString()}</b>
-                </div>
-              )}
-              {v.exercise != null && (
-                <div className="bar-stat vit vit-ex" title={yda ? 'Yesterday — today syncs at your next push' : 'Today, as of last push'}>
-                  <u>EXERCISE{yda ? ' · YDA' : ''}</u>
-                  <b><ExIcon />{v.exercise} MIN</b>
-                </div>
-              )}
-            </>)
+            const hint = yda ? 'Yesterday — updates at your next Health push' : 'Today, as of last Health push'
+            return (
+              <span className="self-stats">
+                {v.steps != null && (
+                  <span className={`self-stat ${yda ? 'yda' : ''}`} title={`Steps · ${hint}`}>
+                    <StepsIcon /><b>{v.steps.toLocaleString()}</b>
+                  </span>
+                )}
+                {v.exercise != null && (
+                  <span className={`self-stat ${yda ? 'yda' : ''}`} title={`Exercise minutes · ${hint}`}>
+                    <ExIcon /><b>{v.exercise}M</b>
+                  </span>
+                )}
+              </span>
+            )
           })()}
-        </div>
-        <div className="bar-clock">
           <time>{clock}<span style={{ fontSize: 9, color: 'var(--dim)', letterSpacing: 1 }}> ET</span></time>
           <button className="sober-chip" onClick={() => setEditSober((v) => !v)} title="Sober day counter — tap to set start date">
             SOBER <b>{sober.days}D</b>

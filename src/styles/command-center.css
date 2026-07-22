@@ -137,14 +137,23 @@
   white-space: nowrap;
 }
 .bar-stat.fc b i { font-style: normal; color: var(--dim); font-weight: 400; }
-.bar-stat.vit { min-width: 0; padding: 6px 10px; }
-.bar-stat.vit b {
-  display: flex;
+/* self cluster: body stats ride with the clock and sober count */
+.self-stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding-right: 12px;
+  border-right: 1px solid var(--line);
+}
+.self-stat {
+  display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 11.5px;
+  font-size: 12px;
+  font-weight: 700;
   white-space: nowrap;
 }
+.self-stat.yda b { color: var(--dim); }
 
 .bar-clock {
   padding: 10px 14px;
@@ -187,10 +196,8 @@
   .bar-stat.date { border-bottom: 1px solid var(--line); }
   .bar-stat.fc { padding: 6px 8px; align-items: center; }
   .bar-stat.fc:last-child { border-right: 0; }
-  .bar-stat.vit { border-top: 1px solid var(--line); }
-  .bar-stat.vit-steps { grid-column: span 2; }
-  .bar-stat.vit-ex { grid-column: span 3; border-right: 0; }
-  .bar-clock { border-left: 0; justify-content: space-between; }
+  .bar-clock { border-left: 0; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  .bar-clock time { font-size: 13px; }
 }
 
 /* ---------- MARQUEE TAPE ---------- */
