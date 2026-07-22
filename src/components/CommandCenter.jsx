@@ -122,18 +122,15 @@ function WxIcon({ code, size = 22 }) {
 /* Schedule from the connected Google Calendar. SCHEDULE_FOR stamps the
    day it was synced for — past that date the panel says so instead of
    showing another day's events as today's. Agent refreshes both daily. */
-const SCHEDULE_FOR = '2026-07-21'
+const SCHEDULE_FOR = '2026-07-22'
 const seedSchedule = [
-  { start: '10:15', end: '11:15', title: 'Piano Lesson', note: 'w/ Candida Borges · protect 15 min warm-up' },
+  { start: '07:00', end: '08:00', title: 'GMG meeting', note: 'double-booked w/ mazurka sight-reading' },
+  { start: '08:00', end: '09:00', title: 'Encon maintenance' },
+  { start: '14:30', end: '15:30', title: 'QSBS gut-check · Citrin Cooperman', note: 'Teams · Brett Franks + Piyush' },
 ]
 
 /* Week ahead — each row carries its real date so stale days drop off. */
 const seedWeek = [
-  { iso: '2026-07-22', day: 'WED', date: '22', items: [
-    { t: '07:00', s: 'GMG meeting' },
-    { t: '08:00', s: 'Encon maintenance' },
-    { t: '14:30', s: 'QSBS gut-check · Citrin Cooperman', hot: true },
-  ]},
   { iso: '2026-07-23', day: 'THU', date: '23', items: [
     { t: '07:00', s: 'Sight-read mazurka ×2' },
   ]},
@@ -154,7 +151,12 @@ const seedWeek = [
   { iso: '2026-07-28', day: 'TUE', date: '28', items: [
     { t: '09:15', s: 'Coffee w/ Tim Coleman · CFCF' },
     { t: '10:15', s: 'Piano Lesson' },
-    { t: '14:30', s: 'Ben’s oral surgery consult · Stamford' },
+    { t: '14:30', s: 'Ben’s oral surgery consult · Stamford', hot: true },
+  ]},
+  { iso: '2026-07-29', day: 'WED', date: '29', items: [
+    { t: '07:00', s: 'GMG meeting' },
+    { t: '17:30', s: 'Dinner · Keens Steakhouse NYC' },
+    { t: '18:00', s: 'Phish at MSG · Sec 120 Row 6' },
   ]},
 ]
 
