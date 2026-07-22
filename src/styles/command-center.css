@@ -748,9 +748,27 @@ td.sym small { display: block; color: var(--dim); font-size: 9.5px; letter-spaci
 }
 .agenda-col.fam .agenda-col-head { color: var(--fam); }
 .agenda-row.fam .agenda-time { color: var(--fam); }
+
+/* the two week panels ride side by side at every width */
+.week-pair {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.week-pair .panel { min-width: 0; }
+
+/* compact metrics so the halves fit a phone screen */
 @media (max-width: 640px) {
-  .agenda-split { grid-template-columns: 1fr; }
-  .agenda-col.fam { border-left: 0; border-top: 1px solid var(--line-bright); }
+  .agenda-split .agenda-row { grid-template-columns: 48px 1fr; }
+  .agenda-split .agenda-time { padding: 10px 6px; font-size: 11px; }
+  .agenda-split .agenda-body { padding: 10px 8px; }
+  .agenda-split .agenda-body h3 { font-size: 11.5px; }
+  .week-pair .week-row { grid-template-columns: 34px 1fr; }
+  .week-pair .week-day { padding: 8px 4px; }
+  .week-pair .week-items { padding: 7px 8px; }
+  .week-pair .week-items p { font-size: 10.5px; }
+  .week-pair .panel-head h2 { font-size: 10px; letter-spacing: 1px; }
+  .week-pair .panel-head .meta { display: none; }
 }
 
 /* ---------- STREAKS ----------

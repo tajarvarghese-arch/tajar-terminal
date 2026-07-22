@@ -994,55 +994,39 @@ export default function CommandCenter() {
           </div>
         </section>
 
-        {/* ---------- WEEK AHEAD (personal) ---------- */}
-        <section className="panel">
-          <div className="panel-head">
-            <h2>WEEK AHEAD{hasFam ? ' · PERSONAL' : ''}</h2>
-            <span className="meta">{weekMeta}</span>
-          </div>
-          <div className="week-list">
-            {weekRows.length === 0 && (
-              <div className="agenda-empty">Week not synced — awaiting the morning refresh.</div>
-            )}
-            {weekRows.map((d) => (
-              <div className="week-row" key={d.iso}>
-                <div className="week-day"><b>{d.day}</b><small>{d.date}</small></div>
-                <div className="week-items">
-                  {d.items.map((it, i) => (
-                    <p key={i} className={it.hot ? 'hot' : ''}>
-                      <span>{it.t}</span> {it.s}
-                    </p>
-                  ))}
-                </div>
+        {/* ---------- WEEK AHEAD (personal | family side by side) ---------- */}
+        {(() => {
+          const weekPanel = (title, rows, fam, emptyText) => (
+            <section className={`panel ${fam ? 'fam' : ''}`}>
+              <div className="panel-head">
+                <h2>{title}</h2>
+                <span className="meta">{weekMeta}</span>
               </div>
-            ))}
-          </div>
-        </section>
-
-        {/* ---------- WEEK AHEAD (family) ---------- */}
-        {hasFam && (
-          <section className="panel fam">
-            <div className="panel-head">
-              <h2>WEEK AHEAD · FAMILY</h2>
-              <span className="meta">{weekMeta}</span>
-            </div>
-            <div className="week-list">
-              {weekRowsFam.length === 0 && (
-                <div className="agenda-empty">Nothing on the family calendar this week.</div>
-              )}
-              {weekRowsFam.map((d) => (
-                <div className="week-row" key={d.iso}>
-                  <div className="week-day"><b>{d.day}</b><small>{d.date}</small></div>
-                  <div className="week-items">
-                    {d.items.map((it, i) => (
-                      <p key={i}><span>{it.t}</span> {it.s}</p>
-                    ))}
+              <div className="week-list">
+                {rows.length === 0 && <div className="agenda-empty">{emptyText}</div>}
+                {rows.map((d) => (
+                  <div className="week-row" key={d.iso}>
+                    <div className="week-day"><b>{d.day}</b><small>{d.date}</small></div>
+                    <div className="week-items">
+                      {d.items.map((it, i) => (
+                        <p key={i} className={it.hot ? 'hot' : ''}>
+                          <span>{it.t}</span> {it.s}
+                        </p>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            </section>
+          )
+          if (!hasFam) return weekPanel('WEEK AHEAD', weekRows, false, 'Week not synced — awaiting the morning refresh.')
+          return (
+            <div className="week-pair">
+              {weekPanel('WEEK · PERSONAL', weekRows, false, 'Clear week.')}
+              {weekPanel('WEEK · FAMILY', weekRowsFam, true, 'Nothing on the family calendar this week.')}
             </div>
-          </section>
-        )}
+          )
+        })()}
 
         {/* ---------- HORIZON ---------- */}
         <section className="panel">
