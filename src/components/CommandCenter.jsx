@@ -1020,11 +1020,40 @@ export default function CommandCenter() {
             </section>
           )
           if (!hasFam) return weekPanel('WEEK AHEAD', weekRows, false, 'Week not synced — awaiting the morning refresh.')
+          /* one grid, shared day rail — days line up across both columns */
           return (
-            <div className="week-pair">
-              {weekPanel('WEEK · PERSONAL', weekRows, false, 'Clear week.')}
-              {weekPanel('WEEK · FAMILY', weekRowsFam, true, 'Nothing on the family calendar this week.')}
-            </div>
+            <section className="panel span-2">
+              <div className="panel-head">
+                <h2>WEEK AHEAD</h2>
+                <span className="meta">{weekMeta}</span>
+              </div>
+              <div className="week-grid-head">
+                <span />
+                <span className="col-p">PERSONAL</span>
+                <span className="col-f">FAMILY</span>
+              </div>
+              {weekRowsAll.map((d) => {
+                const p = d.items.filter((it) => !it.cal)
+                const f = d.items.filter((it) => it.cal)
+                return (
+                  <div className="week-grid-row" key={d.iso}>
+                    <div className="week-day"><b>{d.day}</b><small>{d.date}</small></div>
+                    <div className="week-items">
+                      {p.length === 0 && <p className="none">—</p>}
+                      {p.map((it, i) => (
+                        <p key={i} className={it.hot ? 'hot' : ''}><span>{it.t}</span> {it.s}</p>
+                      ))}
+                    </div>
+                    <div className="week-items fam">
+                      {f.length === 0 && <p className="none">—</p>}
+                      {f.map((it, i) => (
+                        <p key={i}><span>{it.t}</span> {it.s}</p>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </section>
           )
         })()}
 

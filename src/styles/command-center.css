@@ -749,13 +749,29 @@ td.sym small { display: block; color: var(--dim); font-size: 9.5px; letter-spaci
 .agenda-col.fam .agenda-col-head { color: var(--fam); }
 .agenda-row.fam .agenda-time { color: var(--fam); }
 
-/* the two week panels ride side by side at every width */
-.week-pair {
-  grid-column: 1 / -1;
+/* one week grid, shared day rail: [day | personal | family] */
+.week-grid-head {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 50px 1fr 1fr;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel-2);
 }
-.week-pair .panel { min-width: 0; }
+.week-grid-head span {
+  padding: 5px 12px;
+  font-size: 9px;
+  letter-spacing: 2px;
+}
+.week-grid-head .col-p { color: var(--amber); border-left: 1px solid var(--line); }
+.week-grid-head .col-f { color: var(--fam); border-left: 1px solid var(--line); }
+.week-grid-row {
+  display: grid;
+  grid-template-columns: 50px 1fr 1fr;
+  border-bottom: 1px solid var(--line);
+}
+.week-grid-row .week-day { border-right: 0; }
+.week-grid-row .week-items { border-left: 1px solid var(--line); min-width: 0; }
+.week-grid-row .week-items.fam span { color: var(--fam-dim); }
+.week-grid-row .week-items p.none { color: var(--dim-2); }
 
 /* compact metrics so the halves fit a phone screen */
 @media (max-width: 640px) {
@@ -763,12 +779,12 @@ td.sym small { display: block; color: var(--dim); font-size: 9.5px; letter-spaci
   .agenda-split .agenda-time { padding: 10px 6px; font-size: 11px; }
   .agenda-split .agenda-body { padding: 10px 8px; }
   .agenda-split .agenda-body h3 { font-size: 11.5px; }
-  .week-pair .week-row { grid-template-columns: 34px 1fr; }
-  .week-pair .week-day { padding: 8px 4px; }
-  .week-pair .week-items { padding: 7px 8px; }
-  .week-pair .week-items p { font-size: 10.5px; }
-  .week-pair .panel-head h2 { font-size: 10px; letter-spacing: 1px; }
-  .week-pair .panel-head .meta { display: none; }
+  .week-grid-head { grid-template-columns: 34px 1fr 1fr; }
+  .week-grid-head span { padding: 5px 8px; }
+  .week-grid-row { grid-template-columns: 34px 1fr 1fr; }
+  .week-grid-row .week-day { padding: 8px 4px; }
+  .week-grid-row .week-items { padding: 7px 8px; }
+  .week-grid-row .week-items p { font-size: 10.5px; }
 }
 
 /* ---------- STREAKS ----------
