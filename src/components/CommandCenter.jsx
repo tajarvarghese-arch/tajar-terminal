@@ -367,6 +367,28 @@ export default function CommandCenter() {
     return () => clearInterval(t)
   }, [])
 
+  /* wake refresh — iOS resumes the frozen page when the home-screen icon
+     is tapped; bumping this tick makes every data effect re-pull
+     immediately on wake (throttled to once per 15 s). */
+  const [refreshTick, setRefreshTick] = useState(0)
+  const lastWake = useRef(Date.now())
+  useEffect(() => {
+    const wake = () => {
+      if (document.visibilityState !== 'visible') return
+      if (Date.now() - lastWake.current < 15000) return
+      lastWake.current = Date.now()
+      setRefreshTick((t) => t + 1)
+    }
+    document.addEventListener('visibilitychange', wake)
+    window.addEventListener('pageshow', wake)
+    window.addEventListener('focus', wake)
+    return () => {
+      document.removeEventListener('visibilitychange', wake)
+      window.removeEventListener('pageshow', wake)
+      window.removeEventListener('focus', wake)
+    }
+  }, [])
+
   /* wire tape scroll — rAF-driven so iOS can't drop the animated layer.
      Width is measured live each frame; wraps at the exact halfway point. */
   useEffect(() => {
@@ -415,7 +437,7 @@ export default function CommandCenter() {
     pull()
     const id = setInterval(pull, 300000)
     return () => { alive = false; clearInterval(id) }
-  }, [])
+  }, [refreshTick])
 
   /* ---------- cloud sync (Upstash via /api/state) ----------
      localStorage stays the offline cache; the server copy survives
@@ -485,7 +507,7 @@ export default function CommandCenter() {
       }
     })()
     return () => { alive = false }
-  }, [syncKey]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [syncKey, refreshTick]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /* debounced push on any personal-state change */
   useEffect(() => {
@@ -532,11 +554,11 @@ export default function CommandCenter() {
     pull()
     const id = setInterval(pull, 300000)
     return () => { alive = false; clearInterval(id) }
-  }, [syncKey])
+  }, [syncKey, refreshTick])
 
   /* live calendar — Google secret iCal feed via /api/calendar.
-     Pulled on load, every 15 min, and every time the app returns to the
-     foreground — so the schedule is synced whenever the app is opened. */
+     Pulled on load, every 15 min, and on every wake via refreshTick —
+     so the schedule is synced whenever the app is opened. */
   useEffect(() => {
     if (!syncKey) { setCalDays(null); return }
     let alive = true
@@ -550,10 +572,8 @@ export default function CommandCenter() {
     }
     pull()
     const id = setInterval(pull, 900000)
-    const onVisible = () => { if (document.visibilityState === 'visible') pull() }
-    document.addEventListener('visibilitychange', onVisible)
-    return () => { alive = false; clearInterval(id); document.removeEventListener('visibilitychange', onVisible) }
-  }, [syncKey])
+    return () => { alive = false; clearInterval(id) }
+  }, [syncKey, refreshTick])
 
   /* tides — NOAA Cos Cob Harbor, refreshed every 6 h (predictions are static) */
   useEffect(() => {
@@ -578,7 +598,7 @@ export default function CommandCenter() {
     pull()
     const id = setInterval(pull, 21600000)
     return () => { alive = false; clearInterval(id) }
-  }, [])
+  }, [refreshTick])
 
   /* next high / low tide relative to now */
   const nextTide = useMemo(() => {
@@ -623,7 +643,7 @@ export default function CommandCenter() {
     pull()
     const id = setInterval(pull, 900000)
     return () => { alive = false; clearInterval(id) }
-  }, [])
+  }, [refreshTick])
 
   /* live quotes — Vercel proxy to Yahoo (no key). Falls back to seed snapshot. */
   useEffect(() => {
@@ -649,7 +669,7 @@ export default function CommandCenter() {
     pull()
     const id = setInterval(pull, 15000)
     return () => { alive = false; clearInterval(id) }
-  }, [])
+  }, [refreshTick])
 
   /* ---------- derived ---------- */
   const rows = useMemo(() =>
