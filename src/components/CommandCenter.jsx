@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { mergeState, normTodos, normHorizon, normStreaks } from '../lib/sync'
 import '../styles/command-center.css'
 
 /* ============================================================
@@ -337,15 +338,15 @@ export default function CommandCenter() {
   const [focus, setFocus] = useState(() => loadStr(K.focus, ''))
   const [editFocus, setEditFocus] = useState(false)
   const [focusDraft, setFocusDraft] = useState('')
-  const [todos, setTodos] = useState(() => load(K.todos, seedTodos))
+  const [todos, setTodos] = useState(() => normTodos(load(K.todos, seedTodos)))
   const [todoDraft, setTodoDraft] = useState('')
-  const [horizon, setHorizon] = useState(() => load(K.horizon, seedHorizon))
+  const [horizon, setHorizon] = useState(() => normHorizon(load(K.horizon, seedHorizon)))
   const [hzDraft, setHzDraft] = useState('')
   const [reasons, setReasons] = useState(() => load(K.reasons, seedReasons))
   const [reasonDraft, setReasonDraft] = useState('')
   const [wx, setWx] = useState(null)
   const [tides, setTides] = useState([])
-  const [streaks, setStreaks] = useState(() => load(K.streaks, seedStreaks))
+  const [streaks, setStreaks] = useState(() => normStreaks(load(K.streaks, seedStreaks)))
   const [habitDraft, setHabitDraft] = useState('')
   const [logEntries, setLogEntries] = useState(() => load(K.log, []))
   const [logDraft, setLogDraft] = useState('')
@@ -442,36 +443,17 @@ export default function CommandCenter() {
   /* ---------- cloud sync (Upstash via /api/state) ----------
      localStorage stays the offline cache; the server copy survives
      domain changes, re-installs, and new devices. Last write wins. */
-  /* Log entries merge by date instead of last-write-wins: a line written
-     on one device must survive any other device syncing afterwards.
-     `a` wins when both blobs hold the same date. */
-  const mergeLogs = (a = [], b = []) => {
-    const m = new Map()
-    for (const e of b) if (e?.d) m.set(e.d, e)
-    for (const e of a) if (e?.d) m.set(e.d, e)
-    return [...m.values()].sort((x, y) => y.d.localeCompare(x.d))
-  }
-
-  const applyRemote = (d) => {
-    /* Suppress the push-back echo with a time window, not a consume-flag:
-       if every setter below happens to bail (values identical), a consumed
-       flag would swallow the user's NEXT real edit instead. */
-    applyingRef.current = true
-    setTimeout(() => { applyingRef.current = false }, 100)
-    if (d.soberStart) setSoberStart(d.soberStart)
-    if (typeof d.focus === 'string') setFocus(d.focus)
-    if (Array.isArray(d.todos)) setTodos(d.todos)
-    if (Array.isArray(d.horizon)) setHorizon(d.horizon)
-    if (Array.isArray(d.reasons)) setReasons(d.reasons)
-    if (d.streaks?.habits) setStreaks(d.streaks)
-    if (Array.isArray(d.logEntries)) setLogEntries((cur) => mergeLogs(d.logEntries, cur))
-  }
-
   const snapshot = () => ({
     soberStart, focus, todos, horizon, reasons, streaks, logEntries,
   })
+  const snapshotRef = useRef(snapshot)
+  snapshotRef.current = snapshot
 
-  /* pull once per key change */
+  /* pull + item-level merge on key change and on every wake.
+     Collections merge item-wise (newer mt wins, tombstones stick), so a
+     stale device can no longer clobber another device's edits; scalars
+     go to whichever blob is newer overall. The merged result is written
+     back up so the server converges too. */
   useEffect(() => {
     if (!syncKey) { setSyncStatus('off'); return }
     let alive = true
@@ -479,26 +461,30 @@ export default function CommandCenter() {
       try {
         const res = await fetch('/api/state', { headers: { 'x-sync-key': syncKey } })
         if (!alive) return
-        if (res.status === 401) { setSyncStatus('err'); return }
         if (!res.ok) { setSyncStatus('err'); return }
         const body = await res.json()
         const localUpdated = Number(loadStr(K.updated, '0')) || 0
-        if (body?.data && (body.updatedAt || 0) > localUpdated) {
-          applyRemote(body.data)
-          try { localStorage.setItem(K.updated, String(body.updatedAt)) } catch {}
-        } else {
-          // local is newer (or server empty) — seed the server, but never
-          // discard log entries the server has and this device doesn't
-          const mergedLogs = mergeLogs(logEntries, body?.data?.logEntries || [])
-          if (mergedLogs.length !== logEntries.length) {
-            applyingRef.current = true
-            setTimeout(() => { applyingRef.current = false }, 100)
-            setLogEntries(mergedLogs)
-          }
+        const remote = body?.data || {}
+        const remoteNewer = (body?.updatedAt || 0) > localUpdated
+        const merged = mergeState(remote, snapshotRef.current(), remoteNewer)
+
+        applyingRef.current = true
+        setTimeout(() => { applyingRef.current = false }, 100)
+        if (merged.soberStart) setSoberStart(merged.soberStart)
+        setFocus(merged.focus)
+        setTodos(merged.todos)
+        setHorizon(merged.horizon)
+        setReasons(merged.reasons)
+        setStreaks(merged.streaks)
+        setLogEntries(merged.logEntries)
+
+        if (JSON.stringify(merged) !== JSON.stringify(remote)) {
+          const updatedAt = Date.now()
+          try { localStorage.setItem(K.updated, String(updatedAt)) } catch {}
           await fetch('/api/state', {
             method: 'PUT',
             headers: { 'x-sync-key': syncKey, 'content-type': 'application/json' },
-            body: JSON.stringify({ data: { ...snapshot(), logEntries: mergedLogs }, updatedAt: localUpdated || Date.now() }),
+            body: JSON.stringify({ data: merged, updatedAt }),
           })
         }
         setSyncStatus('ok')
@@ -510,11 +496,13 @@ export default function CommandCenter() {
   }, [syncKey, refreshTick]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /* debounced push on any personal-state change */
+  const dirtyRef = useRef(false)
   useEffect(() => {
     if (!syncKey) return
     if (applyingRef.current) return
     const updatedAt = Date.now()
     try { localStorage.setItem(K.updated, String(updatedAt)) } catch {}
+    dirtyRef.current = true
     clearTimeout(pushTimer.current)
     pushTimer.current = setTimeout(async () => {
       try {
@@ -523,6 +511,7 @@ export default function CommandCenter() {
           headers: { 'x-sync-key': syncKey, 'content-type': 'application/json' },
           body: JSON.stringify({ data: snapshot(), updatedAt }),
         })
+        if (res.ok) dirtyRef.current = false
         setSyncStatus(res.ok ? 'ok' : 'err')
       } catch {
         setSyncStatus('err')
@@ -530,6 +519,31 @@ export default function CommandCenter() {
     }, 1500)
     return () => clearTimeout(pushTimer.current)
   }, [soberStart, focus, todos, horizon, reasons, streaks, logEntries]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* emergency flush — a tap made in the last 1.5 s must not be stranded
+     when iOS freezes the page. keepalive lets the request outlive it. */
+  useEffect(() => {
+    if (!syncKey) return
+    const flush = () => {
+      if (document.visibilityState !== 'hidden' || !dirtyRef.current) return
+      clearTimeout(pushTimer.current)
+      const updatedAt = Date.now()
+      try { localStorage.setItem(K.updated, String(updatedAt)) } catch {}
+      dirtyRef.current = false
+      fetch('/api/state', {
+        method: 'PUT',
+        keepalive: true,
+        headers: { 'x-sync-key': syncKey, 'content-type': 'application/json' },
+        body: JSON.stringify({ data: snapshotRef.current(), updatedAt }),
+      }).catch(() => { dirtyRef.current = true })
+    }
+    document.addEventListener('visibilitychange', flush)
+    window.addEventListener('pagehide', flush)
+    return () => {
+      document.removeEventListener('visibilitychange', flush)
+      window.removeEventListener('pagehide', flush)
+    }
+  }, [syncKey])
 
   const saveSyncKey = () => {
     const k = syncDraft.trim()
@@ -691,7 +705,8 @@ export default function CommandCenter() {
   const sober = useMemo(() => ({ days: daysSince(soberStart, now) }), [soberStart, now])
 
   const horizonSorted = useMemo(() => {
-    return [...horizon]
+    return horizon
+      .filter((h) => !h.del)
       .map((h) => ({ ...h, t: h.date ? daysUntil(h.date, now) : Infinity }))
       .sort((a, b) => a.t - b.t)
   }, [horizon, now])
@@ -717,19 +732,20 @@ export default function CommandCenter() {
   const addTodo = () => {
     const text = todoDraft.trim()
     if (!text) return
-    setTodos((t) => [...t, { id: Date.now(), text, done: false }])
+    setTodos((t) => [...t, { id: Date.now(), text, done: false, mt: Date.now() }])
     setTodoDraft('')
   }
-  const toggleTodo = (id) => setTodos((t) => t.map((x) => (x.id === id ? { ...x, done: !x.done } : x)))
-  const delTodo = (id) => setTodos((t) => t.filter((x) => x.id !== id))
+  const toggleTodo = (id) => setTodos((t) => t.map((x) => (x.id === id ? { ...x, done: !x.done, mt: Date.now() } : x)))
+  const delTodo = (id) => setTodos((t) => t.map((x) => (x.id === id ? { ...x, del: 1, mt: Date.now() } : x)))
+  const visibleTodos = todos.filter((t) => !t.del)
 
   const hzParsed = useMemo(() => parseGoal(hzDraft, now), [hzDraft, now])
   const addHorizon = () => {
     if (!hzParsed) return
-    setHorizon((h) => [...h, { id: Date.now(), label: hzParsed.label, date: hzParsed.date, note: '', progress: null }])
+    setHorizon((h) => [...h, { id: Date.now(), label: hzParsed.label, date: hzParsed.date, note: '', progress: null, mt: Date.now() }])
     setHzDraft('')
   }
-  const delHorizon = (id) => setHorizon((h) => h.filter((x) => x.id !== id))
+  const delHorizon = (id) => setHorizon((h) => h.map((x) => (x.id === id ? { ...x, del: 1, mt: Date.now() } : x)))
 
   const addReason = () => {
     const text = reasonDraft.trim()
@@ -795,15 +811,25 @@ export default function CommandCenter() {
   const last28 = useMemo(() => {
     return [...Array(28)].map((_, i) => isoOf(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 27 + i)))
   }, [todayISO]) // eslint-disable-line react-hooks/exhaustive-deps
+  /* marks live as {habitId: {date: {on, mt}}} so un-marking syncs safely */
+  const onDates = (habitId) => {
+    const m = streaks.marks[habitId] || {}
+    return new Set(Object.keys(m).filter((d) => m[d]?.on))
+  }
   const toggleMark = (habitId, iso) => {
     setStreaks((s) => {
-      const cur = new Set(s.marks[habitId] || [])
-      cur.has(iso) ? cur.delete(iso) : cur.add(iso)
-      return { ...s, marks: { ...s.marks, [habitId]: [...cur] } }
+      const cur = s.marks[habitId]?.[iso]?.on
+      return {
+        ...s,
+        marks: {
+          ...s.marks,
+          [habitId]: { ...(s.marks[habitId] || {}), [iso]: { on: cur ? 0 : 1, mt: Date.now() } },
+        },
+      }
     })
   }
   const streakCount = (habitId) => {
-    const marked = new Set(streaks.marks[habitId] || [])
+    const marked = onDates(habitId)
     let count = 0
     // streak = consecutive marked days ending today (or yesterday if today not yet logged)
     let cursor = marked.has(todayISO) ? 0 : 1
@@ -817,10 +843,14 @@ export default function CommandCenter() {
   const addHabit = () => {
     const name = habitDraft.trim().toUpperCase()
     if (!name) return
-    setStreaks((s) => ({ ...s, habits: [...s.habits, { id: `h${Date.now()}`, name }] }))
+    setStreaks((s) => ({ ...s, habits: [...s.habits, { id: `h${Date.now()}`, name, mt: Date.now() }] }))
     setHabitDraft('')
   }
-  const delHabit = (id) => setStreaks((s) => ({ ...s, habits: s.habits.filter((h) => h.id !== id) }))
+  const delHabit = (id) => setStreaks((s) => ({
+    ...s,
+    habits: s.habits.map((h) => (h.id === id ? { ...h, del: 1, mt: Date.now() } : h)),
+  }))
+  const visibleHabits = streaks.habits.filter((h) => !h.del)
 
   /* vitals history — last 28 days shaped for the bar tracker */
   const vitalsHist = useMemo(() => {
@@ -848,7 +878,7 @@ export default function CommandCenter() {
     setLogDraft('')
   }
 
-  const openTodos = todos.filter((t) => !t.done).length
+  const openTodos = todos.filter((t) => !t.del && !t.done).length
 
   return (
     <div className="term">
@@ -1071,7 +1101,7 @@ export default function CommandCenter() {
             <button onClick={addTodo}>+ ADD</button>
           </div>
           <div className="todo-list">
-            {todos.map((t) => (
+            {visibleTodos.map((t) => (
               <button className={`todo-item ${t.done ? 'done' : ''}`} key={t.id} onClick={() => toggleTodo(t.id)}>
                 <span className="todo-box">{t.done ? '✓' : ''}</span>
                 <span className="txt">{t.text}</span>
@@ -1193,8 +1223,8 @@ export default function CommandCenter() {
             <span className="meta">TAP A ROW = DONE TODAY</span>
           </div>
           <div className="streak-list">
-            {streaks.habits.map((h) => {
-              const marked = new Set(streaks.marks[h.id] || [])
+            {visibleHabits.map((h) => {
+              const marked = onDates(h.id)
               const doneToday = marked.has(todayISO)
               return (
                 <button className={`streak-row ${doneToday ? 'done' : ''}`} key={h.id}
