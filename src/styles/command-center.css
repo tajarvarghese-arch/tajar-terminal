@@ -16,6 +16,8 @@
   --dim-2: #55504780;
   --up: #3ddc84;
   --down: #ff453a;
+  --fam: #57c7ff;
+  --fam-dim: #2a6a8a;
   --up-bg: rgba(61, 220, 132, 0.10);
   --down-bg: rgba(255, 69, 58, 0.10);
 }
@@ -723,17 +725,32 @@ td.sym small { display: block; color: var(--dim); font-size: 9.5px; letter-spaci
 .week-items p.hot { color: var(--amber); }
 .week-items p.hot span { color: var(--amber-dim); }
 
-/* which-calendar chip (e.g. FAM) */
-.cal-tag {
-  display: inline-block;
-  color: var(--amber-dim);
-  border: 1px solid var(--line-bright);
-  font-size: 8.5px;
-  font-weight: 400;
-  letter-spacing: 1px;
-  padding: 0 4px;
-  margin-left: 7px;
-  vertical-align: 1px;
+/* ---------- FAMILY calendar accent (cyan vs personal amber) ---------- */
+.panel.fam .panel-head h2 { color: var(--fam); }
+.panel.fam .panel-head h2::before { background: var(--fam); }
+.panel.fam .week-day b { color: var(--fam); }
+.panel.fam .week-items p span { color: var(--fam-dim); }
+
+/* today's split agenda: personal left, family right */
+.agenda-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.agenda-col { min-width: 0; }
+.agenda-col.fam { border-left: 1px solid var(--line); }
+.agenda-col-head {
+  padding: 5px 12px;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--amber);
+  border-bottom: 1px solid var(--line);
+  background: var(--panel-2);
+}
+.agenda-col.fam .agenda-col-head { color: var(--fam); }
+.agenda-row.fam .agenda-time { color: var(--fam); }
+@media (max-width: 640px) {
+  .agenda-split { grid-template-columns: 1fr; }
+  .agenda-col.fam { border-left: 0; border-top: 1px solid var(--line-bright); }
 }
 
 /* ---------- STREAKS ----------

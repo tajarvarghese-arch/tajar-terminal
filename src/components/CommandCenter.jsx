@@ -691,7 +691,7 @@ export default function CommandCenter() {
   const todaySchedule = liveToday ?? (scheduleFresh ? seedSchedule : [])
   const calOK = liveToday != null || scheduleFresh
 
-  const weekRows = useMemo(() => {
+  const weekRowsAll = useMemo(() => {
     if (!calDays) return seedWeek.filter((d) => d.iso > todayISO)
     return [...Array(7)].map((_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1 + i)
@@ -702,8 +702,22 @@ export default function CommandCenter() {
         date: String(d.getDate()),
         items: (calDays[iso] || []).map((it) => ({ t: it.t, s: it.s, cal: it.cal })),
       }
-    }).filter((r) => r.items.length)
+    })
   }, [calDays, todayISO]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* personal left, family (any labeled feed) right */
+  const hasFam = useMemo(
+    () => !!calDays && Object.values(calDays).some((items) => items.some((it) => it.cal)),
+    [calDays]
+  )
+  const splitWeek = (wantFam) =>
+    weekRowsAll
+      .map((r) => ({ ...r, items: r.items.filter((it) => (wantFam ? !!it.cal : !it.cal)) }))
+      .filter((r) => r.items.length)
+  const weekRows = hasFam ? splitWeek(false) : weekRowsAll.filter((r) => r.items.length)
+  const weekRowsFam = hasFam ? splitWeek(true) : []
+  const todayPersonal = todaySchedule.filter((e) => !e.cal)
+  const todayFamily = todaySchedule.filter((e) => e.cal)
 
   const mdShort = (iso) =>
     new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit' }).format(parseMid(iso)).toUpperCase()
@@ -917,27 +931,48 @@ export default function CommandCenter() {
             )
           })()}
 
-          <div className="agenda">
-            {!calOK && (
-              <div className="agenda-empty">
-                Calendar not synced for today — last sync {fmtDate(SCHEDULE_FOR)}. The morning refresh will update it.
-              </div>
-            )}
-            {calOK && todaySchedule.length === 0 && <div className="agenda-empty">No commitments today. Clear board.</div>}
-            {todaySchedule.map((e, i) => {
+          {(() => {
+            const renderRows = (list, fam) => list.map((e, i) => {
               const active = nowHM >= e.start && nowHM < e.end
               return (
-                <div className="agenda-row" key={i}>
+                <div className={`agenda-row ${fam ? 'fam' : ''}`} key={i}>
                   <div className="agenda-time">{e.start}<small>{e.end}</small></div>
                   <div className="agenda-body">
-                    <h3>{e.title}{e.cal && <span className="cal-tag">{e.cal}</span>}</h3>
+                    <h3>{e.title}</h3>
                     {e.note && <p>{e.note}</p>}
                     {active && <span className="now">&#9679; NOW</span>}
                   </div>
                 </div>
               )
-            })}
-          </div>
+            })
+            if (!calOK) return (
+              <div className="agenda">
+                <div className="agenda-empty">
+                  Calendar not synced for today — last sync {fmtDate(SCHEDULE_FOR)}. The morning refresh will update it.
+                </div>
+              </div>
+            )
+            if (!hasFam) return (
+              <div className="agenda">
+                {todaySchedule.length === 0 && <div className="agenda-empty">No commitments today. Clear board.</div>}
+                {renderRows(todaySchedule, false)}
+              </div>
+            )
+            return (
+              <div className="agenda-split">
+                <div className="agenda-col">
+                  <div className="agenda-col-head">PERSONAL</div>
+                  {todayPersonal.length === 0 && <div className="agenda-empty">Clear.</div>}
+                  {renderRows(todayPersonal, false)}
+                </div>
+                <div className="agenda-col fam">
+                  <div className="agenda-col-head">FAMILY</div>
+                  {todayFamily.length === 0 && <div className="agenda-empty">Clear.</div>}
+                  {renderRows(todayFamily, true)}
+                </div>
+              </div>
+            )
+          })()}
 
           <div className="todo-add">
             <input
@@ -959,10 +994,10 @@ export default function CommandCenter() {
           </div>
         </section>
 
-        {/* ---------- WEEK AHEAD ---------- */}
+        {/* ---------- WEEK AHEAD (personal) ---------- */}
         <section className="panel">
           <div className="panel-head">
-            <h2>WEEK AHEAD</h2>
+            <h2>WEEK AHEAD{hasFam ? ' · PERSONAL' : ''}</h2>
             <span className="meta">{weekMeta}</span>
           </div>
           <div className="week-list">
@@ -970,12 +1005,12 @@ export default function CommandCenter() {
               <div className="agenda-empty">Week not synced — awaiting the morning refresh.</div>
             )}
             {weekRows.map((d) => (
-              <div className="week-row" key={d.day}>
+              <div className="week-row" key={d.iso}>
                 <div className="week-day"><b>{d.day}</b><small>{d.date}</small></div>
                 <div className="week-items">
                   {d.items.map((it, i) => (
                     <p key={i} className={it.hot ? 'hot' : ''}>
-                      <span>{it.t}</span> {it.s}{it.cal && <span className="cal-tag">{it.cal}</span>}
+                      <span>{it.t}</span> {it.s}
                     </p>
                   ))}
                 </div>
@@ -983,6 +1018,31 @@ export default function CommandCenter() {
             ))}
           </div>
         </section>
+
+        {/* ---------- WEEK AHEAD (family) ---------- */}
+        {hasFam && (
+          <section className="panel fam">
+            <div className="panel-head">
+              <h2>WEEK AHEAD · FAMILY</h2>
+              <span className="meta">{weekMeta}</span>
+            </div>
+            <div className="week-list">
+              {weekRowsFam.length === 0 && (
+                <div className="agenda-empty">Nothing on the family calendar this week.</div>
+              )}
+              {weekRowsFam.map((d) => (
+                <div className="week-row" key={d.iso}>
+                  <div className="week-day"><b>{d.day}</b><small>{d.date}</small></div>
+                  <div className="week-items">
+                    {d.items.map((it, i) => (
+                      <p key={i}><span>{it.t}</span> {it.s}</p>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* ---------- HORIZON ---------- */}
         <section className="panel">
@@ -1132,8 +1192,8 @@ export default function CommandCenter() {
           </section>
         )}
 
-        {/* ---------- GROUNDING ---------- */}
-        <section className={`panel ${syncKey ? '' : 'span-2'}`}>
+        {/* ---------- GROUNDING (span depends on panel parity above) ---------- */}
+        <section className={`panel ${!syncKey || hasFam ? 'span-2' : ''}`}>
           <div className="panel-head">
             <h2>GROUNDING</h2>
             <span className="meta">WHY</span>
