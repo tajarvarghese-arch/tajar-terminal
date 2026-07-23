@@ -540,7 +540,10 @@ export default function CommandCenter() {
   }, [])
 
   /* wire tape scroll — rAF-driven so iOS can't drop the animated layer.
-     Width is measured live each frame; wraps at the exact halfway point. */
+     Width is measured live each frame; wraps at the exact halfway point.
+     A finger (or hover) holds the tape still for reading. */
+  const tapePaused = useRef(false)
+  const tapeBoxRef = useRef(null)
   useEffect(() => {
     /* respect reduced-motion: a static tape still shows the data */
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
@@ -550,7 +553,7 @@ export default function CommandCenter() {
     const SPEED = 42 // px/s
     const step = (t) => {
       const el = tapeRef.current
-      if (el) {
+      if (el && !tapePaused.current) {
         const half = el.scrollWidth / 2
         const dt = Math.min(0.1, (t - last) / 1000) // clamp resume-from-background jumps
         if (half > 0) {
@@ -562,7 +565,26 @@ export default function CommandCenter() {
       raf = requestAnimationFrame(step)
     }
     raf = requestAnimationFrame(step)
-    return () => cancelAnimationFrame(raf)
+    const box = tapeBoxRef.current
+    const hold = () => { tapePaused.current = true }
+    const release = () => { tapePaused.current = false }
+    if (box) {
+      box.addEventListener('pointerenter', hold)
+      box.addEventListener('pointerdown', hold)
+      box.addEventListener('pointerleave', release)
+      box.addEventListener('pointerup', release)
+      box.addEventListener('pointercancel', release)
+    }
+    return () => {
+      cancelAnimationFrame(raf)
+      if (box) {
+        box.removeEventListener('pointerenter', hold)
+        box.removeEventListener('pointerdown', hold)
+        box.removeEventListener('pointerleave', release)
+        box.removeEventListener('pointerup', release)
+        box.removeEventListener('pointercancel', release)
+      }
+    }
   }, [])
 
   /* persistence */
@@ -1103,6 +1125,16 @@ export default function CommandCenter() {
 
   const openTodos = todos.filter((t) => !t.del && !t.done).length
 
+  const marketsRef = useRef(null)
+  const jumpToBook = () => {
+    setMktOpen(true)
+    setTimeout(() => marketsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60)
+  }
+
+  /* all habits logged today: the masthead cursor stops blinking and
+     holds solid green — the day's quiet checkmark */
+  const allHabitsDone = visibleHabits.length > 0 && visibleHabits.every((h) => onDates(h.id).has(todayISO))
+
   /* night watch — after real sunset (or before sunrise) the display
      softens: no glow, quieter scanlines, deeper vignette, dimmer amber.
      ?night=1 forces it for testing. */
@@ -1209,9 +1241,10 @@ export default function CommandCenter() {
       {/* ---------- MASTHEAD ---------- */}
       <header className="term-bar">
         <div className="bar-brand">
-          <span className="glyph" role="button" tabIndex={0} aria-label="Open command line"
+          <span className={`glyph ${allHabitsDone ? 'alldone' : ''}`} role="button" tabIndex={0}
+            aria-label="Open command line"
             onClick={() => setCmdOpen(true)} onKeyDown={keyActivate(() => setCmdOpen(true))}
-            title="Command line (/)">&gt;<i /></span>
+            title={allHabitsDone ? 'All habits logged today · command line (/)' : 'Command line (/)'}>&gt;<i /></span>
           <b>TAJAR&nbsp;TERMINAL</b>
           <span>PERSONAL DESK</span>
         </div>
@@ -1288,10 +1321,10 @@ export default function CommandCenter() {
       </header>
 
       {/* ---------- WIRE TAPE ---------- */}
-      <div className="tape" aria-hidden="true">
+      <div className="tape" ref={tapeBoxRef}>
         <div className="tape-track" ref={tapeRef}>
           {[0, 1].map((rep) => (
-            <span key={rep}>
+            <span key={rep} aria-hidden={rep === 1 || undefined}>
               {wx && (
                 <span className="tape-item">
                   <b>GREENWICH</b>
@@ -1300,23 +1333,24 @@ export default function CommandCenter() {
                 </span>
               )}
               {mkt.movers.map((r) => (
-                <span className="tape-item" key={`${r.sym}-${rep}`}>
+                <span className="tape-item tape-jump" key={`${r.sym}-${rep}`} title="Open the book"
+                  onClick={jumpToBook}>
                   <b>{r.sym}</b>
                   <span className="px">{px(r.last)}</span>
                   <span className={`chg ${r.chgPct >= 0 ? 'up' : 'down'}`}>{pct(r.chgPct)}</span>
                 </span>
               ))}
-              <span className="tape-item">
+              <span className="tape-item tape-jump" title="Open the book" onClick={jumpToBook}>
                 <b>BOOK</b>
                 <span className="px">{usdShort(mkt.netLiq)}</span>
                 <span className={`chg ${mkt.dayPnl >= 0 ? 'up' : 'down'}`}>{pct(mkt.dayPct)}</span>
               </span>
               {wire.map((n, i) => (
-                <span className="tape-item" key={`w${i}-${rep}`}>
+                <a className="tape-item tape-link" href={n.url} target="_blank" rel="noreferrer" key={`w${i}-${rep}`}>
                   <b>{n.src}</b>
                   <span className="px">{n.title.length > 90 ? n.title.slice(0, 89).trimEnd() + '…' : n.title}</span>
                   {n.time && <span className="age">{n.time}</span>}
-                </span>
+                </a>
               ))}
               {wire.length === 0 && (
                 <span className="tape-item">
@@ -1786,7 +1820,7 @@ export default function CommandCenter() {
         </section>
 
         {/* ---------- MARKETS (collapsed strip) ---------- */}
-        <section className="panel span-2">
+        <section className="panel span-2" ref={marketsRef}>
           <div className="panel-head mkt-head" onClick={() => setMktOpen((v) => !v)}>
             <h2><span className="fn">09</span>MARKETS</h2>
             <span className="meta">

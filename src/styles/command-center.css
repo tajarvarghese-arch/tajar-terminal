@@ -345,6 +345,13 @@
 .tape-item .wx-note { color: var(--dim); } /* weather is context, not a loss */
 .tape-item .chg.up { color: var(--up); }
 .tape-item .chg.down { color: var(--down); }
+a.tape-link { text-decoration: none; color: inherit; }
+a.tape-link:hover .px { color: var(--amber); }
+.tape-jump { cursor: pointer; }
+.tape-jump:hover .px { color: var(--amber); }
+
+/* all habits logged: the cursor holds steady green */
+.glyph.alldone i { background: var(--up); animation: none; }
 
 /* reduced motion: kill every blink and pulse; tape is stopped in JS */
 @media (prefers-reduced-motion: reduce) {

@@ -146,6 +146,21 @@ updates the checkboxes before ending.
       journal grows. Moon phase cell in the conditions strip (pure
       astronomy, drawn terminator glyph, no API).
 
+### Creative loop (round 7)
+- [x] X1 Book heat strip: 16 positions as intensity-scaled green/red
+      blocks in the collapsed markets strip; tap opens the book;
+      desaturates when the session is closed.
+- [x] X2 Night watch: after real sunset (weather-fed, clock fallback)
+      glow goes off, scanlines quiet, vignette deepens, amber steps
+      down via variable swap; moon marker in the clock row; ?night=1
+      test override.
+- [x] X3 Interactive tape: headlines are real links (duplicate rep is
+      aria-hidden), a finger/hover holds the crawl still, tickers and
+      BOOK jump to the markets panel. Ritual: when every habit is
+      logged, the masthead cursor stops blinking and holds solid
+      green. (Tape pause verified by inspection — hidden test pane
+      halts rAF entirely; motion itself verified in loop 8's fix.)
+
 ### Discovered (loop appends here; user triages into P0–P2)
 - [x] Captain's log capped at 10 entries with no way to read history
       (grows daily via focus archiving) → SHOW ALL/SHOW RECENT toggle;
