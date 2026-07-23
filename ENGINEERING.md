@@ -85,9 +85,10 @@ updates the checkboxes before ending.
       icon-192.png + apple-touch-icon. iOS ignores manifest icons
       (uses apple-touch-icon) — manifest serves spec-compliance and
       any future Android use.
-- [ ] Accessibility pass: aria-labels on all icon-only controls,
-      prefers-reduced-motion disables the tape scroll and blinking
-      cursors, focus outlines that fit the aesthetic.
+- [x] Accessibility pass: aria-labels on all inputs and ✕ controls,
+      ✕ spans keyboard-operable (role=button, tabIndex, Enter/Space),
+      amber :focus-visible ring. (Reduced-motion shipped in loop 8.)
+      Design rider: hover affordance on the sober and sync chips.
 - [ ] Expanded book view: group rows long/short with subtotal lines
       (gross long, gross short, net).
 - [ ] Lighthouse pass: fix anything scoring under 90 that doesn't

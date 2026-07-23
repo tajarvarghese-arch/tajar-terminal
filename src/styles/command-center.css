@@ -24,6 +24,12 @@
 
 * { font-family: inherit; }
 
+/* keyboard focus ring in the house amber; never shown for mouse focus */
+:focus-visible {
+  outline: 1px solid var(--amber);
+  outline-offset: 2px;
+}
+
 /* natural document scroll — iOS gets rubber-banding, toolbar collapse, tap-to-top */
 .term {
   min-height: 100vh;
@@ -154,6 +160,7 @@
   white-space: nowrap;
 }
 .self-stat.yda b { color: var(--dim); }
+.sober-chip:hover, .sync-chip:hover { border-color: var(--amber-dim); color: var(--amber); }
 
 .bar-clock {
   padding: 10px 14px;

@@ -948,6 +948,12 @@ export default function CommandCenter() {
 
   const openTodos = todos.filter((t) => !t.del && !t.done).length
 
+  /* keyboard activation for span-based ✕ controls (nested in row buttons,
+     so they can't be <button>s themselves) */
+  const keyActivate = (fn) => (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); fn() }
+  }
+
   return (
     <div className="term">
       {/* ---------- MASTHEAD ---------- */}
@@ -996,7 +1002,7 @@ export default function CommandCenter() {
           </button>
           {editSober && (
             <span className="sober-date-edit" style={{ marginTop: 0 }}>
-              <input type="date" value={soberStart} max={new Intl.DateTimeFormat('en-CA').format(now)}
+              <input type="date" value={soberStart} aria-label="Sobriety start date" max={new Intl.DateTimeFormat('en-CA').format(now)}
                 onChange={(e) => e.target.value && setSoberStart(e.target.value)} />
               <button onClick={() => setEditSober(false)}>OK</button>
             </span>
@@ -1062,7 +1068,7 @@ export default function CommandCenter() {
             {editFocus ? (
               <div className="edit-row">
                 <input
-                  autoFocus value={focusDraft}
+                  autoFocus value={focusDraft} aria-label="Today's focus"
                   onChange={(e) => setFocusDraft(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && saveFocus()}
                   placeholder="The one thing that defines today"
@@ -1167,7 +1173,7 @@ export default function CommandCenter() {
 
           <div className="todo-add">
             <input
-              value={todoDraft}
+              value={todoDraft} aria-label="Add a must-do"
               onChange={(e) => setTodoDraft(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addTodo()}
               placeholder="ADD A MUST-DO — PRESS ENTER"
@@ -1179,7 +1185,9 @@ export default function CommandCenter() {
               <button className={`todo-item ${t.done ? 'done' : ''}`} key={t.id} onClick={() => toggleTodo(t.id)}>
                 <span className="todo-box">{t.done ? '✓' : ''}</span>
                 <span className="txt">{t.text}</span>
-                <span className="todo-del" onClick={(e) => { e.stopPropagation(); delTodo(t.id) }} aria-label="delete">&#10005;</span>
+                <span className="todo-del" role="button" tabIndex={0} aria-label={`Delete ${t.text}`}
+                  onClick={(e) => { e.stopPropagation(); delTodo(t.id) }}
+                  onKeyDown={keyActivate(() => delTodo(t.id))}>&#10005;</span>
               </button>
             ))}
           </div>
@@ -1257,7 +1265,7 @@ export default function CommandCenter() {
           </div>
           <div className="hz-add">
             <span className="prompt">&gt;</span>
-            <input value={hzDraft} onChange={(e) => setHzDraft(e.target.value)}
+            <input value={hzDraft} aria-label="Add a goal, optionally ending with a date" onChange={(e) => setHzDraft(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addHorizon()}
               placeholder="ADD GOAL · END WITH A DATE — JUL 23 · 7/23 · IN 10D · FRI" />
             {hzParsed?.date && (
@@ -1276,7 +1284,8 @@ export default function CommandCenter() {
                     {h.t === Infinity ? <b>&mdash;</b> : h.t <= 0 ? <b>DUE</b> : <><b>{h.t}</b><small>DAYS</small></>}
                   </div>
                   <div className="hz-body">
-                    <span className="hz-del" onClick={() => delHorizon(h.id)} aria-label="delete">&#10005;</span>
+                    <span className="hz-del" role="button" tabIndex={0} aria-label={`Delete goal ${h.label}`}
+                      onClick={() => delHorizon(h.id)} onKeyDown={keyActivate(() => delHorizon(h.id))}>&#10005;</span>
                     <h3>{h.label}{h.kind && <span className="kind">{h.kind}</span>}</h3>
                     {(h.date || h.note) && (
                       <p>{h.date ? fmtDate(h.date) : ''}{h.date && h.note ? ' · ' : ''}{h.note || ''}</p>
@@ -1306,8 +1315,9 @@ export default function CommandCenter() {
                   onClick={() => toggleMark(h.id, todayISO)}>
                   <span className="streak-name">
                     {h.name}
-                    <span className="streak-del"
-                      onClick={(e) => { e.stopPropagation(); delHabit(h.id) }} aria-label="delete">&#10005;</span>
+                    <span className="streak-del" role="button" tabIndex={0} aria-label={`Delete habit ${h.name}`}
+                      onClick={(e) => { e.stopPropagation(); delHabit(h.id) }}
+                      onKeyDown={keyActivate(() => delHabit(h.id))}>&#10005;</span>
                   </span>
                   <span className="streak-cells">
                     {last28.map((iso) => (
@@ -1326,7 +1336,7 @@ export default function CommandCenter() {
             })}
           </div>
           <div className="todo-add">
-            <input value={habitDraft} onChange={(e) => setHabitDraft(e.target.value)}
+            <input value={habitDraft} aria-label="Add a habit" onChange={(e) => setHabitDraft(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addHabit()} placeholder="ADD A HABIT — PRESS ENTER" />
             <button onClick={addHabit}>+ ADD</button>
           </div>
@@ -1339,7 +1349,7 @@ export default function CommandCenter() {
             <span className="meta">{logEntries.length} ENTRIES</span>
           </div>
           <div className="todo-add">
-            <input value={logDraft} onChange={(e) => setLogDraft(e.target.value)}
+            <input value={logDraft} aria-label="Captain's log — one line about today" onChange={(e) => setLogDraft(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && saveLog()}
               placeholder={todayLog ? 'REWRITE TODAY’S LINE — PRESS ENTER' : 'ONE LINE ABOUT TODAY — PRESS ENTER'} />
             <button onClick={saveLog}>LOG</button>
@@ -1456,12 +1466,13 @@ export default function CommandCenter() {
                 <div className="reason-row" key={i}>
                   <span className="rdot">&#9642;</span>
                   <span className="rtext">{r}</span>
-                  <span className="rdel" onClick={() => delReason(i)} aria-label="delete">&#10005;</span>
+                  <span className="rdel" role="button" tabIndex={0} aria-label={`Delete reason ${r}`}
+                    onClick={() => delReason(i)} onKeyDown={keyActivate(() => delReason(i))}>&#10005;</span>
                 </div>
               ))}
             </div>
             <div className="todo-add">
-              <input value={reasonDraft} onChange={(e) => setReasonDraft(e.target.value)}
+              <input value={reasonDraft} aria-label="Add a reason why" onChange={(e) => setReasonDraft(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && addReason()} placeholder="ADD A REASON WHY — PRESS ENTER" />
               <button onClick={addReason}>+ ADD</button>
             </div>
@@ -1526,7 +1537,7 @@ export default function CommandCenter() {
         {editSync ? (
           <span className="sync-edit">
             <input
-              autoFocus type="password" value={syncDraft}
+              autoFocus type="password" value={syncDraft} aria-label="Sync key"
               onChange={(e) => setSyncDraft(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && saveSyncKey()}
               placeholder="SYNC KEY"
