@@ -107,6 +107,19 @@ updates the checkboxes before ending.
 - [ ] Streak depth: show best-ever run alongside the current one
       (dim `BEST nD`) — habits only, never sobriety.
 
+### Design loop (round 4) — text & graphics, aesthetic preserved
+- [x] D1 Type scale: 15 font sizes → 7 (9/10/11/12/13/15/20),
+      6 letter-spacings → 3 (0.5/1/2).
+- [x] D2 Spacing rhythm: row/head paddings collapsed to 5/7/9(/10–14
+      masthead) verticals on the 12px gutter.
+- [x] D3 Color semantics enforced: amber=structure, green=life/live,
+      red=losses only, cyan=family. Precip in the tape de-redded;
+      VITALS/TRENDS panels carry green markers.
+- [x] D4 Microcopy voice: short declaratives; removed the stale
+      "11:59 PM sync" claim (HAE syncs hourly now).
+- [x] D5 Graphic details: weather glyphs get proportional stroke
+      (2.4 at ≤14px), chart columns grounded with a baseline rule.
+
 ### Discovered (loop appends here; user triages into P0–P2)
 - [x] Captain's log capped at 10 entries with no way to read history
       (grows daily via focus archiving) → SHOW ALL/SHOW RECENT toggle;

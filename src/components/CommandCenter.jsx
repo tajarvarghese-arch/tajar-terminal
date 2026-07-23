@@ -78,10 +78,11 @@ const wmoLabel = (code) => (WMO.find(([max]) => code <= max) || [0, '—'])[1]
 /* minimal monochrome weather glyphs — amber sun, dim cloud/precip */
 function WxIcon({ code, size = 22 }) {
   const amber = '#ffab00'
-  const dim = '#7d7565'
+  const dim = '#8a8272'
+  const sw = size <= 14 ? 2.4 : 1.6 // heavier stroke so small glyphs stay legible
   const s = { width: size, height: size, display: 'block' }
   const sun = (
-    <g stroke={amber} strokeWidth="1.6" fill="none">
+    <g stroke={amber} strokeWidth={sw} fill="none">
       <circle cx="12" cy="12" r="4.2" />
       {[0, 45, 90, 135, 180, 225, 270, 315].map((a) => {
         const r = (a * Math.PI) / 180
@@ -92,7 +93,7 @@ function WxIcon({ code, size = 22 }) {
   const cloud = (dx = 0, dy = 0) => (
     <path
       d={`M ${6 + dx} ${15 + dy} a 3.4 3.4 0 0 1 .4 -6.8 a 4.6 4.6 0 0 1 8.8 -1 a 3.6 3.6 0 0 1 1.4 7.8 z`}
-      stroke={dim} strokeWidth="1.6" fill="none" strokeLinejoin="round"
+      stroke={dim} strokeWidth={sw} fill="none" strokeLinejoin="round"
     />
   )
   let body
@@ -103,11 +104,11 @@ function WxIcon({ code, size = 22 }) {
   </>)
   else if (code === 3) body = cloud(1.5, 3)
   else if (code <= 48) body = (
-    <g stroke={dim} strokeWidth="1.6"><line x1="4" y1="9" x2="20" y2="9" /><line x1="6" y1="13" x2="18" y2="13" /><line x1="4" y1="17" x2="20" y2="17" /></g>
+    <g stroke={dim} strokeWidth={sw}><line x1="4" y1="9" x2="20" y2="9" /><line x1="6" y1="13" x2="18" y2="13" /><line x1="4" y1="17" x2="20" y2="17" /></g>
   )
   else if (code <= 67 || (code >= 80 && code <= 82)) body = (<>
     {cloud(1.5, 0)}
-    <g stroke={amber} strokeWidth="1.5">
+    <g stroke={amber} strokeWidth={sw}>
       <line x1="8" y1="17.5" x2="6.8" y2="21" /><line x1="12.5" y1="17.5" x2="11.3" y2="21" /><line x1="17" y1="17.5" x2="15.8" y2="21" />
     </g>
   </>)
@@ -125,9 +126,10 @@ function WxIcon({ code, size = 22 }) {
 /* tiny vitals glyphs — health green, sized for the masthead */
 const VIT_GREEN = '#3ddc84'
 function StepsIcon({ size = 12 }) {
+  const sw = 2.4
   return (
     <svg viewBox="0 0 24 24" style={{ width: size, height: size, display: 'block' }} aria-hidden="true">
-      <g stroke={VIT_GREEN} strokeWidth="1.8" fill="none">
+      <g stroke={VIT_GREEN} strokeWidth={sw} fill="none">
         <ellipse cx="8" cy="8" rx="3" ry="5" transform="rotate(-14 8 8)" />
         <ellipse cx="16" cy="16" rx="3" ry="5" transform="rotate(-14 16 16)" />
       </g>
@@ -135,9 +137,10 @@ function StepsIcon({ size = 12 }) {
   )
 }
 function ExIcon({ size = 12 }) {
+  const sw = 2.4
   return (
     <svg viewBox="0 0 24 24" style={{ width: size, height: size, display: 'block' }} aria-hidden="true">
-      <g stroke={VIT_GREEN} strokeWidth="1.8" fill="none">
+      <g stroke={VIT_GREEN} strokeWidth={sw} fill="none">
         <line x1="7" y1="12" x2="17" y2="12" />
         <rect x="3" y="7.5" width="3.4" height="9" />
         <rect x="17.6" y="7.5" width="3.4" height="9" />
@@ -1033,7 +1036,7 @@ export default function CommandCenter() {
                 <span className="tape-item">
                   <b>GREENWICH</b>
                   <span className="px">{wx.temp}°F {wx.label}</span>
-                  <span className="chg down">{wx.precip}% PRECIP</span>
+                  <span className="wx-note">{wx.precip}% PRECIP</span>
                 </span>
               )}
               {mkt.movers.map((r) => (
@@ -1164,7 +1167,7 @@ export default function CommandCenter() {
             if (!calOK) return (
               <div className="agenda">
                 <div className="agenda-empty">
-                  Calendar not synced for today — last sync {fmtDate(SCHEDULE_FOR)}. The morning refresh will update it.
+                  Calendar not synced for today — last sync {fmtDate(SCHEDULE_FOR)}.
                 </div>
               </div>
             )
@@ -1294,7 +1297,7 @@ export default function CommandCenter() {
             )}
           </div>
           <div className="horizon-list">
-            {horizonSorted.length === 0 && <div className="agenda-empty">Nothing on the horizon yet. Add your goals above.</div>}
+            {horizonSorted.length === 0 && <div className="agenda-empty">Horizon clear. Add a goal — end with a date.</div>}
             {horizonSorted.map((h) => {
               const tone = h.kind === 'MILESTONE' ? 'mile' : h.t === Infinity ? 'far' : h.t <= 3 ? 'soon' : h.t <= 10 ? 'near' : 'far'
               return (
@@ -1391,13 +1394,13 @@ export default function CommandCenter() {
 
         {/* ---------- VITALS TRACKER ---------- */}
         {syncKey && (
-          <section className="panel">
+          <section className="panel health">
             <div className="panel-head">
               <h2>VITALS · 28D</h2>
               <span className="meta">{vitalsHist ? `${vitalsHist.logged} DAYS LOGGED` : 'AWAITING SYNC'}</span>
             </div>
             {!vitalsHist || vitalsHist.logged === 0 ? (
-              <div className="agenda-empty">Awaiting pushes — bars appear after tonight&rsquo;s 11:59 PM sync.</div>
+              <div className="agenda-empty">Awaiting health data — bars appear after your first sync.</div>
             ) : (
               <>
                 <div className="chart-block">
@@ -1433,7 +1436,7 @@ export default function CommandCenter() {
 
         {/* ---------- VITALS TRENDS (12-week view over the full history) ---------- */}
         {syncKey && trends && trends.logged >= 45 && (
-          <section className="panel">
+          <section className="panel health">
             <div className="panel-head">
               <h2>TRENDS · 12W</h2>
               <span className="meta">{trends.logged.toLocaleString()} DAYS OF HISTORY</span>
