@@ -60,8 +60,10 @@ updates the checkboxes before ending.
       Kept conservative: different start times never merge.
 
 ### P1 — features
-- [ ] NYSE holiday calendar for the market-status chip (static table of
-      2026–2027 full and half days; label HOLIDAY / EARLY CLOSE).
+- [x] NYSE holiday calendar (src/lib/market.js, tables through 2027 —
+      extend before 2028): named holiday labels, 13:00 early closes,
+      5 test cases. Design rider: weekend rows in the week grid render
+      dimmed for glanceable workday/weekend separation.
 - [ ] Focus-per-day: archive the focus line at day rollover into the
       captain's-log entry for that day (prefix "FOCUS: ") instead of
       letting yesterday's focus linger as today's.

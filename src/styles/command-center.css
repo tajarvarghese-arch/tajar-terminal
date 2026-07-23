@@ -790,6 +790,9 @@ td.sym small { display: block; color: var(--dim); font-size: 9.5px; letter-spaci
 .week-grid-row .week-items { border-left: 1px solid var(--line); min-width: 0; }
 .week-grid-row .week-items.fam span { color: var(--fam-dim); }
 .week-grid-row .week-items p.none { color: var(--dim-2); }
+/* weekends read differently than workdays at a glance */
+.week-grid-row.weekend { background: #0c0b09; }
+.week-grid-row.weekend .week-day b { color: var(--amber-dim); }
 
 /* compact metrics so the halves fit a phone screen */
 @media (max-width: 640px) {

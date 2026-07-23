@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { mergeState, normTodos, normHorizon, normStreaks } from '../lib/sync'
+import { marketState } from '../lib/market'
 import '../styles/command-center.css'
 
 /* ============================================================
@@ -311,17 +312,6 @@ function loadStr(key, fallback) {
   } catch {
     return fallback
   }
-}
-
-function marketState(now) {
-  const et = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false,
-  }).formatToParts(now)
-  const wd = et.find((p) => p.type === 'weekday').value
-  const mins = +et.find((p) => p.type === 'hour').value * 60 + +et.find((p) => p.type === 'minute').value
-  const weekday = !['Sat', 'Sun'].includes(wd)
-  const open = weekday && mins >= 570 && mins < 960
-  return { open, label: open ? 'MKT OPEN' : weekday ? (mins < 570 ? 'PRE-MKT' : 'AFT-MKT') : 'MKT CLOSED' }
 }
 
 export default function CommandCenter() {
@@ -1172,8 +1162,9 @@ export default function CommandCenter() {
               {weekRowsAll.map((d) => {
                 const p = d.items.filter((it) => !it.cal)
                 const f = d.items.filter((it) => it.cal)
+                const weekend = d.day === 'SAT' || d.day === 'SUN'
                 return (
-                  <div className="week-grid-row" key={d.iso}>
+                  <div className={`week-grid-row ${weekend ? 'weekend' : ''}`} key={d.iso}>
                     <div className="week-day"><b>{d.day}</b><small>{d.date}</small></div>
                     <div className="week-items">
                       {p.length === 0 && <p className="none">—</p>}
