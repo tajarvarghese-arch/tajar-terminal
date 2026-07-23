@@ -149,6 +149,35 @@ function ExIcon({ size = 12 }) {
   )
 }
 
+/* boot sequence — a sub-second ritual on home-screen launch.
+   Standalone mode only (browser/audit visits skip it), once per
+   session, honors reduced motion, tap to skip. */
+function Boot({ done }) {
+  const [count, setCount] = useState(1)
+  useEffect(() => {
+    const hour = +new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: '2-digit', hour12: false }).format(new Date())
+    const greet = hour < 5 ? 'STILL UP' : hour < 12 ? 'GOOD MORNING' : hour < 18 ? 'GOOD AFTERNOON' : 'GOOD EVENING'
+    Boot.seq = ['> TAJAR TERMINAL', '> LINK ██████ OK', `> ${greet}, TAJAR.`]
+    const t = setInterval(() => {
+      setCount((c) => {
+        if (c >= Boot.seq.length) { clearInterval(t); setTimeout(done, 500); return c }
+        return c + 1
+      })
+    }, 280)
+    return () => clearInterval(t)
+  }, [done])
+  const seq = Boot.seq || ['> TAJAR TERMINAL']
+  return (
+    <div className="boot" onClick={done} role="presentation">
+      {seq.slice(0, count).map((l, i) => (
+        <p key={i} className={l.includes('OK') ? 'ok' : ''}>
+          {l}{i === count - 1 && <span className="cursor" />}
+        </p>
+      ))}
+    </div>
+  )
+}
+
 /* intraday sparkline — inherits its color from the surrounding chg span */
 function Spark({ data, w = 54, h = 15 }) {
   if (!data || data.length < 2) return null
@@ -391,6 +420,17 @@ export default function CommandCenter() {
     throw new Error('crash test — clear tajar-crash-test and reload')
   }
   const [now, setNow] = useState(() => new Date())
+
+  const [booting, setBooting] = useState(() => {
+    try {
+      if (sessionStorage.getItem('tajar-booted')) return false
+      if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return false
+      const standalone = window.matchMedia?.('(display-mode: standalone)').matches
+      const forced = new URLSearchParams(window.location.search).has('boot')
+      return standalone || forced
+    } catch { return false }
+  })
+  const endBoot = () => { try { sessionStorage.setItem('tajar-booted', '1') } catch {} setBooting(false) }
 
   /* portfolio (demoted) */
   const [book, setBook] = useState(seedBook)
@@ -1031,6 +1071,7 @@ export default function CommandCenter() {
 
   return (
     <div className="term">
+      {booting && <Boot done={endBoot} />}
       {/* ---------- MASTHEAD ---------- */}
       <header className="term-bar">
         <div className="bar-brand">
