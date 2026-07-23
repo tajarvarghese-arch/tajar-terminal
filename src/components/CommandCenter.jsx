@@ -249,6 +249,12 @@ const fmtDate = (s) => {
   if (!d) return '—'
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit', year: '2-digit' }).format(d).toUpperCase()
 }
+/* journal dates carry the weekday — entries read by the rhythm of a week */
+const fmtDateW = (s) => {
+  const d = parseMid(s)
+  if (!d) return '—'
+  return new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: '2-digit' }).format(d).toUpperCase().replace(',', ' ·')
+}
 
 /* ---------- goal command-line parser ----------
    One input: goal text optionally ending with a date token —
@@ -347,6 +353,7 @@ export default function CommandCenter() {
   const [habitDraft, setHabitDraft] = useState('')
   const [logEntries, setLogEntries] = useState(() => load(K.log, []))
   const [logDraft, setLogDraft] = useState('')
+  const [logExpanded, setLogExpanded] = useState(false)
   const [wire, setWire] = useState([])
   const [vitals, setVitals] = useState(null)
   const [calDays, setCalDays] = useState(null)
@@ -1356,12 +1363,17 @@ export default function CommandCenter() {
           </div>
           <div className="log-list">
             {logEntries.length === 0 && <div className="agenda-empty">No entries yet. One honest line a day.</div>}
-            {logEntries.slice(0, 10).map((e) => (
+            {(logExpanded ? logEntries : logEntries.slice(0, 10)).map((e) => (
               <div className="log-row" key={e.d}>
-                <span className="log-date">{fmtDate(e.d)}</span>
+                <span className="log-date">{fmtDateW(e.d)}</span>
                 <p>{e.t}</p>
               </div>
             ))}
+            {logEntries.length > 10 && (
+              <button className="log-more" onClick={() => setLogExpanded((v) => !v)}>
+                {logExpanded ? '▲ SHOW RECENT' : `▼ SHOW ALL (${logEntries.length})`}
+              </button>
+            )}
           </div>
         </section>
 

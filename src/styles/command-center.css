@@ -930,6 +930,12 @@ table.book tr.subtotal td:first-child {
 }
 .log-date { color: var(--amber-dim); font-size: 10px; letter-spacing: 1px; padding-top: 2px; }
 .log-row p { font-size: 12px; line-height: 1.45; color: var(--text); }
+.log-more {
+  background: none; border: 0; border-bottom: 1px solid var(--line);
+  color: var(--dim); font: inherit; font-size: 10px; letter-spacing: 1.5px;
+  padding: 8px 12px; cursor: pointer; text-align: left; width: 100%;
+}
+.log-more:hover { color: var(--amber); }
 
 /* ---------- VITALS TRACKER ---------- */
 .chart-block { padding: 10px 12px 12px; border-bottom: 1px solid var(--line); }

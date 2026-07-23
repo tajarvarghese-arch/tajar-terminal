@@ -89,13 +89,20 @@ updates the checkboxes before ending.
       ✕ spans keyboard-operable (role=button, tabIndex, Enter/Space),
       amber :focus-visible ring. (Reduced-motion shipped in loop 8.)
       Design rider: hover affordance on the sober and sync chips.
-- [ ] Expanded book view: group rows long/short with subtotal lines
-      (gross long, gross short, net).
-- [ ] Lighthouse pass: fix anything scoring under 90 that doesn't
-      conflict with the aesthetic (expect font-display, meta hints).
+- [x] Expanded book view: LONG/SHORT group rails with GROSS LONG,
+      GROSS SHORT, and NET subtotal rows (5 long / 11 short today).
+- [ ] Lighthouse pass: NOT run as a real audit (no headless Chrome in
+      the loop environment). Quick wins shipped instead: noscript
+      fallback, font display=swap already present, preconnects present.
+      Run an actual Lighthouse audit from a browser when convenient.
 
 ### Discovered (loop appends here; user triages into P0–P2)
-- (empty)
+- [x] Captain's log capped at 10 entries with no way to read history
+      (grows daily via focus archiving) → SHOW ALL/SHOW RECENT toggle;
+      journal dates now carry the weekday (THU · JUL 23).
+- [ ] Icon rasters: only 192px PNG generated; manifest leans on the
+      scalable icon.svg. Generate a 512 PNG if Android install support
+      ever matters.
 
 ## Cadence
 
