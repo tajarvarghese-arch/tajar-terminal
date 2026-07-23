@@ -55,9 +55,9 @@ updates the checkboxes before ending.
 - [x] Version-aware wake reload: __BUILD__ define + dist/version.json
       emitted per build; wake handler fetches it (no-store) and reloads
       when the served id differs from the compiled one.
-- [ ] Fuzzy-dedupe calendar events: same start time + near-identical
-      titles (case/punctuation-insensitive prefix match) should render
-      once — the user's calendar has literal duplicates (3× Phish).
+- [x] Fuzzy-dedupe calendar events: same start + ≥60% word overlap
+      collapses to the richer record (location kept, longer title wins).
+      Kept conservative: different start times never merge.
 
 ### P1 — features
 - [ ] NYSE holiday calendar for the market-status chip (static table of

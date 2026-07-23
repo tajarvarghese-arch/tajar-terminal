@@ -81,22 +81,46 @@ export function buildDays(icsText, now = new Date(), label = '') {
   return days
 }
 
-/* Merge day-maps from several feeds: concat, re-sort, drop cross-feed
-   duplicates (same start + title — e.g. an event on both calendars). */
+/* Fuzzy duplicate detection: users create literal duplicates (a ticket
+   email import plus a manual entry). Same start time + ≥60% word
+   overlap (case/punctuation-insensitive) counts as one event. */
+const normTitle = (s) =>
+  String(s).toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim()
+function similarTitles(a, b) {
+  const A = new Set(normTitle(a).split(' ').filter(Boolean))
+  const B = new Set(normTitle(b).split(' ').filter(Boolean))
+  if (!A.size || !B.size) return false
+  let inter = 0
+  for (const w of A) if (B.has(w)) inter++
+  return inter / (A.size + B.size - inter) >= 0.6
+}
+export function dedupeDay(items) {
+  const out = []
+  for (const it of items) {
+    const dup = out.find((o) => o.t === it.t && similarTitles(o.s, it.s))
+    if (dup) {
+      // keep the richer record: fill a missing location, prefer the longer title
+      if (!dup.loc && it.loc) dup.loc = it.loc
+      if (it.s.length > dup.s.length) dup.s = it.s
+      continue
+    }
+    out.push(it)
+  }
+  return out
+}
+
+/* Merge day-maps from several feeds: concat, re-sort, fuzzy-dedupe. */
 export function mergeDays(maps) {
   const days = {}
-  const seen = new Set()
   for (const m of maps) {
     for (const iso of Object.keys(m)) {
-      for (const it of m[iso]) {
-        const k = `${iso}|${it.t}|${it.s.toLowerCase()}`
-        if (seen.has(k)) continue
-        seen.add(k)
-        ;(days[iso] ||= []).push(it)
-      }
+      ;(days[iso] ||= []).push(...m[iso])
     }
   }
-  for (const iso of Object.keys(days)) days[iso].sort((a, b) => a.t.localeCompare(b.t))
+  for (const iso of Object.keys(days)) {
+    days[iso].sort((a, b) => a.t.localeCompare(b.t))
+    days[iso] = dedupeDay(days[iso])
+  }
   return days
 }
 

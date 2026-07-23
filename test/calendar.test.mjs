@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { buildDays, mergeDays } from '../api/calendar.js'
+import { buildDays, mergeDays, dedupeDay } from '../api/calendar.js'
 
 const NOW = new Date('2026-07-22T11:10:00Z') // 07:10 ET Wed Jul 22
 
@@ -121,6 +121,26 @@ test('all-day and cancelled events are skipped', () => {
 test('labeled feeds tag their events', () => {
   const fam = buildDays(FAM_ICS, NOW, 'FAM')
   assert.equal(fam['2026-07-25'].find((i) => i.s === 'Soccer game').cal, 'FAM')
+})
+
+test('fuzzy dedupe: near-identical titles at the same time collapse', () => {
+  const d = dedupeDay([
+    { t: '17:30', e: '19:00', s: 'Reservation at Keens Steakhouse' },
+    { t: '17:30', e: '19:00', s: 'Dinner at Keens Steakhouse', loc: 'Keens Steakhouse' },
+    { t: '18:00', e: '23:00', s: 'Phish at MSG: Sec 120, Row 6, Seats 3-6' },
+    { t: '18:00', e: '23:00', s: 'Phish at MSG: Sec 120, Row 6, Seats 3-6' },
+  ])
+  assert.equal(d.filter((i) => i.s.toLowerCase().includes('keens')).length, 1, 'keens pair collapsed')
+  assert.equal(d.filter((i) => i.s.includes('Phish')).length, 1, 'exact pair collapsed')
+  assert.equal(d.find((i) => i.s.toLowerCase().includes('keens')).loc, 'Keens Steakhouse', 'richer record kept')
+})
+
+test('fuzzy dedupe: distinct events at the same time are NOT merged', () => {
+  const d = dedupeDay([
+    { t: '07:00', e: '08:00', s: 'GMG meeting' },
+    { t: '07:00', e: '08:00', s: 'Sight read mazurka 2x' },
+  ])
+  assert.equal(d.length, 2)
 })
 
 test('mergeDays drops cross-feed duplicates and keeps days sorted', () => {
