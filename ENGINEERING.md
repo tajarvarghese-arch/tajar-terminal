@@ -69,10 +69,12 @@ updates the checkboxes before ending.
       only when the user didn't write one — then clears. Design rider:
       ▸ NEXT chip marks the first upcoming event in today's agenda
       (suppressed while something is ● NOW).
-- [ ] Vitals trends view — ONLY once ≥45 days of health data exist in
-      the store (check first; if not yet, skip without consuming the
-      iteration): 12-week weekly-average bars, weekday-vs-weekend
-      split, best/worst annotations. Same chart idiom as VITALS · 28D.
+- [x] Vitals trends view — gate check found 1,095 days (HAE synced the
+      user's full HealthKit history, not just new days). TRENDS · 12W
+      panel: weekly-average bars for steps + exercise, weekday-vs-
+      weekend split, best-day annotation; hidden below 45 days of data.
+      Design rider: market strip dims its frozen prices whenever the
+      session is closed (honesty cue, verified both color paths).
 - [ ] Tape polish: relative age on headlines (e.g. `· 2H`), cap any
       single headline at ~90 chars with ellipsis.
 

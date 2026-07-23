@@ -921,6 +921,7 @@ td.sym small { display: block; color: var(--dim); font-size: 9.5px; letter-spaci
 .bars.steps i.cur { background: #ffd570; }
 .bars.ex i { background: var(--up); }
 .bars.ex i.cur { background: #8ff0b6; }
+.bars.w12 { grid-template-columns: repeat(12, 1fr); gap: 4px; }
 
 /* ---------- MARKETS strip (collapsed) ---------- */
 .mkt-head { cursor: pointer; }
@@ -941,3 +942,7 @@ td.sym small { display: block; color: var(--dim); font-size: 9.5px; letter-spaci
 .mkt-strip .cell b { font-size: 13px; font-weight: 700; }
 .mkt-strip .movers { display: flex; flex-wrap: wrap; gap: 12px; padding: 9px 12px; font-size: 11px; }
 .mkt-strip .movers .mv b { color: var(--amber); letter-spacing: 0.5px; }
+/* closed session = frozen prices; dim them so the strip doesn't feign liveness */
+.mkt-strip.closed .cell b,
+.mkt-strip.closed .movers .mv b,
+.mkt-strip.closed .movers .mv span { color: var(--dim); }

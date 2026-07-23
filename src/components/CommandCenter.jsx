@@ -894,6 +894,47 @@ export default function CommandCenter() {
     }
   }, [vitals, last28])
 
+  /* vitals trends — 12 weekly averages + weekday/weekend split + best day */
+  const trends = useMemo(() => {
+    if (!vitals) return null
+    const dayMs = 86400000
+    const mid = todayMid(now).getTime()
+    const get = (t) => vitals[isoOf(new Date(t))]
+    const weeks = []
+    for (let w = 11; w >= 0; w--) {
+      const end = mid - w * 7 * dayMs
+      let s = 0, sc = 0, e = 0, ec = 0
+      for (let d = 6; d >= 0; d--) {
+        const v = get(end - d * dayMs)
+        if (typeof v?.steps === 'number') { s += v.steps; sc++ }
+        if (typeof v?.exercise === 'number') { e += v.exercise; ec++ }
+      }
+      weeks.push({
+        endISO: isoOf(new Date(end)),
+        steps: sc ? Math.round(s / sc) : null,
+        ex: ec ? Math.round(e / ec) : null,
+      })
+    }
+    let wdS = 0, wdC = 0, weS = 0, weC = 0, bestSteps = 0, bestISO = null
+    for (let d = 0; d < 90; d++) {
+      const t = mid - d * dayMs
+      const v = get(t)
+      if (typeof v?.steps !== 'number') continue
+      const dow = new Date(t).getDay()
+      if (dow === 0 || dow === 6) { weS += v.steps; weC++ } else { wdS += v.steps; wdC++ }
+      if (v.steps > bestSteps) { bestSteps = v.steps; bestISO = isoOf(new Date(t)) }
+    }
+    return {
+      weeks,
+      maxWkSteps: Math.max(1, ...weeks.map((w) => w.steps || 0)),
+      maxWkEx: Math.max(1, ...weeks.map((w) => w.ex || 0)),
+      wkdayAvg: wdC ? Math.round(wdS / wdC) : null,
+      wkndAvg: weC ? Math.round(weS / weC) : null,
+      bestSteps, bestISO,
+      logged: Object.keys(vitals).length,
+    }
+  }, [vitals, todayISO]) // eslint-disable-line react-hooks/exhaustive-deps
+
   /* captain's log — one line per day; saving again overwrites today's line */
   const todayLog = logEntries.find((e) => e.d === todayISO)
   const saveLog = () => {
@@ -1353,6 +1394,42 @@ export default function CommandCenter() {
           </section>
         )}
 
+        {/* ---------- VITALS TRENDS (12-week view over the full history) ---------- */}
+        {syncKey && trends && trends.logged >= 45 && (
+          <section className="panel">
+            <div className="panel-head">
+              <h2>TRENDS · 12W</h2>
+              <span className="meta">{trends.logged.toLocaleString()} DAYS OF HISTORY</span>
+            </div>
+            <div className="chart-block">
+              <div className="chart-label">
+                <u>STEPS · WEEKLY AVG</u>
+                <span>
+                  WKDAY <b>{trends.wkdayAvg?.toLocaleString() ?? '—'}</b> · WKND <b>{trends.wkndAvg?.toLocaleString() ?? '—'}</b>
+                </span>
+              </div>
+              <div className="bars steps w12">
+                {trends.weeks.map((w) => (
+                  <i key={w.endISO} title={`wk ending ${w.endISO} · ${w.steps != null ? w.steps.toLocaleString() + ' avg steps/day' : 'no data'}`}
+                    style={{ height: w.steps != null ? `${Math.max(6, (w.steps / trends.maxWkSteps) * 100)}%` : '2px' }} />
+                ))}
+              </div>
+            </div>
+            <div className="chart-block">
+              <div className="chart-label">
+                <u>EXERCISE · WEEKLY AVG</u>
+                <span>BEST DAY <b>{trends.bestSteps ? trends.bestSteps.toLocaleString() : '—'}</b>{trends.bestISO ? ` · ${fmtDate(trends.bestISO)}` : ''}</span>
+              </div>
+              <div className="bars ex w12">
+                {trends.weeks.map((w) => (
+                  <i key={w.endISO} title={`wk ending ${w.endISO} · ${w.ex != null ? w.ex + ' avg min/day' : 'no data'}`}
+                    style={{ height: w.ex != null ? `${Math.max(6, (w.ex / trends.maxWkEx) * 100)}%` : '2px' }} />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* ---------- GROUNDING (span depends on panel parity above) ---------- */}
         <section className={`panel ${!syncKey || hasFam ? 'span-2' : ''}`}>
           <div className="panel-head">
@@ -1399,7 +1476,7 @@ export default function CommandCenter() {
             </span>
           </div>
           {!mktOpen ? (
-            <div className="mkt-strip">
+            <div className={`mkt-strip ${marketStatus.open ? '' : 'closed'}`}>
               <div className="cell"><u>NET LIQ</u><b>{usdShort(mkt.netLiq)}</b></div>
               <div className="cell"><u>DAY P&amp;L</u><b className={cls(mkt.dayPnl)}>{usdShort(mkt.dayPnl)}</b></div>
               <div className="movers">
