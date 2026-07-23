@@ -229,23 +229,6 @@
   white-space: nowrap;
 }
 .bar-stat.fc b i { font-style: normal; color: var(--dim); font-weight: 400; }
-/* self cluster: body stats ride with the clock and sober count */
-.self-stats {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  padding-right: 12px;
-  border-right: 1px solid var(--line);
-}
-.self-stat {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 12px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-.self-stat.yda b { color: var(--dim); }
 .sober-chip:hover, .sync-chip:hover { border-color: var(--amber-dim); color: var(--amber); }
 
 /* touch-target hygiene: on coarse pointers the row is the interface,
@@ -272,13 +255,6 @@
 }
 .day-gauge b { display: block; height: 100%; background: var(--amber-dim); }
 
-/* steps-vs-10K micro meter */
-.self-stat .meter {
-  width: 34px; height: 3px;
-  background: var(--line);
-  display: inline-block;
-}
-.self-stat .meter i { display: block; height: 100%; background: var(--up); }
 .bar-clock time { font-size: 15px; font-weight: 700; letter-spacing: 1px; color: var(--amber); text-shadow: 0 0 9px rgba(255, 171, 0, 0.4); }
 .mkt {
   font-size: 10px;
@@ -786,9 +762,6 @@ table.book tr.subtotal td:first-child {
 .wx-strip .tide-hi { color: var(--up); }
 .wx-strip .tide-lo { color: var(--amber); }
 
-.vitals-strip { border-top: 0; }
-.vitals-strip .vit-src { color: var(--amber); }
-.vitals-strip b.muted { color: var(--dim); }
 
 /* ---------- HORIZON ---------- */
 .horizon-list { display: flex; flex-direction: column; }
@@ -1174,3 +1147,6 @@ table.book tr.subtotal td:first-child {
 .mkt-strip.closed .cell b,
 .mkt-strip.closed .movers .mv b,
 .mkt-strip.closed .movers .mv span { color: var(--dim); }
+
+/* vitals head toggles like markets */
+.vit-head { cursor: pointer; }

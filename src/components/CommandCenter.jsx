@@ -124,32 +124,6 @@ function WxIcon({ code, size = 22 }) {
   return <svg viewBox="0 0 24 24" style={s} aria-hidden="true">{body}</svg>
 }
 
-/* tiny vitals glyphs — health green, sized for the masthead */
-const VIT_GREEN = '#3ddc84'
-function StepsIcon({ size = 12 }) {
-  const sw = 2.4
-  return (
-    <svg viewBox="0 0 24 24" style={{ width: size, height: size, display: 'block' }} aria-hidden="true">
-      <g stroke={VIT_GREEN} strokeWidth={sw} fill="none">
-        <ellipse cx="8" cy="8" rx="3" ry="5" transform="rotate(-14 8 8)" />
-        <ellipse cx="16" cy="16" rx="3" ry="5" transform="rotate(-14 16 16)" />
-      </g>
-    </svg>
-  )
-}
-function ExIcon({ size = 12 }) {
-  const sw = 2.4
-  return (
-    <svg viewBox="0 0 24 24" style={{ width: size, height: size, display: 'block' }} aria-hidden="true">
-      <g stroke={VIT_GREEN} strokeWidth={sw} fill="none">
-        <line x1="7" y1="12" x2="17" y2="12" />
-        <rect x="3" y="7.5" width="3.4" height="9" />
-        <rect x="17.6" y="7.5" width="3.4" height="9" />
-      </g>
-    </svg>
-  )
-}
-
 /* boot sequence — a sub-second ritual on home-screen launch.
    Standalone mode only (browser/audit visits skip it), once per
    session, honors reduced motion, tap to skip. */
@@ -530,6 +504,7 @@ export default function CommandCenter() {
   const [logExpanded, setLogExpanded] = useState(false)
   const [wire, setWire] = useState([])
   const [vitals, setVitals] = useState(null)
+  const [vitalsOpen, setVitalsOpen] = useState(false)
   const [calDays, setCalDays] = useState(null)
   const [calTs, setCalTs] = useState(null)
   const [syncKey, setSyncKey] = useState(() => loadStr(K.syncKey, ''))
@@ -1310,29 +1285,6 @@ export default function CommandCenter() {
           )}
         </div>
         <div className="bar-clock">
-          {(() => {
-            if (!vitals) return null
-            const ydaISO = isoOf(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1))
-            const v = vitals[todayISO] || vitals[ydaISO]
-            if (!v) return null
-            const yda = !vitals[todayISO]
-            const hint = yda ? 'Yesterday — updates at your next Health push' : 'Today, as of last Health push'
-            return (
-              <span className="self-stats">
-                {v.steps != null && (
-                  <span className={`self-stat ${yda ? 'yda' : ''}`} title={`Steps · ${hint} · meter vs 10K`}>
-                    <StepsIcon /><b>{v.steps.toLocaleString()}</b>
-                    <span className="meter"><i style={{ width: `${Math.min(100, (v.steps / 10000) * 100)}%` }} /></span>
-                  </span>
-                )}
-                {v.exercise != null && (
-                  <span className={`self-stat ${yda ? 'yda' : ''}`} title={`Exercise minutes · ${hint}`}>
-                    <ExIcon /><b>{v.exercise}M</b>
-                  </span>
-                )}
-              </span>
-            )
-          })()}
           <time>{clock}<span style={{ fontSize: 9, color: 'var(--dim)', letterSpacing: 1 }}> ET</span></time>
           <button className="sober-chip" onClick={() => setEditSober((v) => !v)} title="Sober day counter — tap to set start date">
             SOBER <b>{sober.days}D</b>
@@ -1469,32 +1421,6 @@ export default function CommandCenter() {
           </div>
 
 
-          {(() => {
-            if (!vitals) {
-              /* reserve the row while health data loads (only when sync is on) */
-              if (!syncKey) return null
-              return (
-                <div className="wx-strip vitals-strip">
-                  <span><u>VITALS</u><b className="vit-src">HEALTH</b></span>
-                  <span><u>STEPS</u><b className="muted">—</b></span>
-                  <span><u>EXERCISE</u><b className="muted">—</b></span>
-                </div>
-              )
-            }
-            const ydaISO = isoOf(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1))
-            const t = vitals[todayISO]
-            const y = vitals[ydaISO]
-            if (!t && !y) return null
-            return (
-              <div className="wx-strip vitals-strip">
-                <span><u>VITALS</u><b className="vit-src">HEALTH</b></span>
-                {t?.steps != null && <span><u>STEPS</u><b>{t.steps.toLocaleString()}</b></span>}
-                {t?.exercise != null && <span><u>EXERCISE</u><b>{t.exercise} MIN</b></span>}
-                {y?.steps != null && <span><u>YDA STEPS</u><b className="muted">{y.steps.toLocaleString()}</b></span>}
-                {y?.exercise != null && <span><u>YDA EX</u><b className="muted">{y.exercise} MIN</b></span>}
-              </div>
-            )
-          })()}
 
           {(() => {
             const renderRows = (list, fam) => {
@@ -1749,20 +1675,35 @@ export default function CommandCenter() {
           </div>
         </section>
 
-        {/* ---------- VITALS TRACKER ---------- */}
+        {/* ---------- VITALS — one quiet home, closed by default ---------- */}
         {syncKey && (
           <section className="panel health">
-            <div className="panel-head">
-              <h2><span className="fn">06</span>VITALS · 28D</h2>
-              <span className="meta">{vitalsHist ? `${vitalsHist.logged} DAYS LOGGED` : 'AWAITING SYNC'}</span>
+            <div className="panel-head vit-head" onClick={() => setVitalsOpen((v) => !v)}>
+              <h2><span className="fn">06</span>VITALS</h2>
+              <span className="meta">
+                {(() => {
+                  if (!vitals) return 'AWAITING SYNC'
+                  const ydaISO = isoOf(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1))
+                  const v = vitals[todayISO] || vitals[ydaISO]
+                  if (!v) return 'AWAITING SYNC'
+                  const yda = !vitals[todayISO]
+                  return (<>
+                    STEPS <b>{v.steps != null ? v.steps.toLocaleString() : '—'}</b>
+                    {' · EX '}<b>{v.exercise != null ? `${v.exercise}M` : '—'}</b>
+                    {yda ? ' · YDA' : ''}
+                    {vitalsHist ? <> · 28D AVG <b>{vitalsHist.avgSteps.toLocaleString()}</b></> : null}
+                  </>)
+                })()}
+                <span className="chev"> &nbsp;{vitalsOpen ? '▲ HIDE' : '▼ CHARTS'}</span>
+              </span>
             </div>
-            {!vitalsHist || vitalsHist.logged === 0 ? (
-              <div className="agenda-empty">Awaiting health data — bars appear after your first sync.</div>
+            {vitalsOpen && (!vitalsHist || vitalsHist.logged === 0 ? (
+              <div className="agenda-empty">Awaiting health data — history appears after your first sync.</div>
             ) : (
               <>
                 <div className="chart-block">
                   <div className="chart-label">
-                    <u>STEPS</u>
+                    <u>STEPS · 28D</u>
                     <span>AVG <b>{vitalsHist.avgSteps.toLocaleString()}</b> · BEST <b>{vitalsHist.maxSteps.toLocaleString()}</b></span>
                   </div>
                   <div className="bars steps">
@@ -1775,7 +1716,7 @@ export default function CommandCenter() {
                 </div>
                 <div className="chart-block">
                   <div className="chart-label">
-                    <u>EXERCISE MIN</u>
+                    <u>EXERCISE · 28D</u>
                     <span>AVG <b>{vitalsHist.avgEx}</b> · BEST <b>{vitalsHist.maxEx}</b></span>
                   </div>
                   <div className="bars ex">
@@ -1786,44 +1727,36 @@ export default function CommandCenter() {
                     ))}
                   </div>
                 </div>
+                {trends && trends.logged >= 45 && (
+                  <>
+                    <div className="chart-block">
+                      <div className="chart-label">
+                        <u>STEPS · 12W AVG</u>
+                        <span>WKDAY <b>{trends.wkdayAvg?.toLocaleString() ?? '—'}</b> · WKND <b>{trends.wkndAvg?.toLocaleString() ?? '—'}</b></span>
+                      </div>
+                      <div className="bars steps w12">
+                        {trends.weeks.map((w) => (
+                          <i key={w.endISO} title={`wk ending ${w.endISO} · ${w.steps != null ? w.steps.toLocaleString() + ' avg steps/day' : 'no data'}`}
+                            style={{ height: w.steps != null ? `${Math.max(6, (w.steps / trends.maxWkSteps) * 100)}%` : '2px' }} />
+                        ))}
+                      </div>
+                    </div>
+                    <div className="chart-block">
+                      <div className="chart-label">
+                        <u>EXERCISE · 12W AVG</u>
+                        <span>BEST DAY <b>{trends.bestSteps ? trends.bestSteps.toLocaleString() : '—'}</b>{trends.bestISO ? ` · ${fmtDate(trends.bestISO)}` : ''}</span>
+                      </div>
+                      <div className="bars ex w12">
+                        {trends.weeks.map((w) => (
+                          <i key={w.endISO} title={`wk ending ${w.endISO} · ${w.ex != null ? w.ex + ' avg min/day' : 'no data'}`}
+                            style={{ height: w.ex != null ? `${Math.max(6, (w.ex / trends.maxWkEx) * 100)}%` : '2px' }} />
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
               </>
-            )}
-          </section>
-        )}
-
-        {/* ---------- VITALS TRENDS (12-week view over the full history) ---------- */}
-        {syncKey && trends && trends.logged >= 45 && (
-          <section className="panel health">
-            <div className="panel-head">
-              <h2><span className="fn">07</span>TRENDS · 12W</h2>
-              <span className="meta">{trends.logged.toLocaleString()} DAYS OF HISTORY</span>
-            </div>
-            <div className="chart-block">
-              <div className="chart-label">
-                <u>STEPS · WEEKLY AVG</u>
-                <span>
-                  WKDAY <b>{trends.wkdayAvg?.toLocaleString() ?? '—'}</b> · WKND <b>{trends.wkndAvg?.toLocaleString() ?? '—'}</b>
-                </span>
-              </div>
-              <div className="bars steps w12">
-                {trends.weeks.map((w) => (
-                  <i key={w.endISO} title={`wk ending ${w.endISO} · ${w.steps != null ? w.steps.toLocaleString() + ' avg steps/day' : 'no data'}`}
-                    style={{ height: w.steps != null ? `${Math.max(6, (w.steps / trends.maxWkSteps) * 100)}%` : '2px' }} />
-                ))}
-              </div>
-            </div>
-            <div className="chart-block">
-              <div className="chart-label">
-                <u>EXERCISE · WEEKLY AVG</u>
-                <span>BEST DAY <b>{trends.bestSteps ? trends.bestSteps.toLocaleString() : '—'}</b>{trends.bestISO ? ` · ${fmtDate(trends.bestISO)}` : ''}</span>
-              </div>
-              <div className="bars ex w12">
-                {trends.weeks.map((w) => (
-                  <i key={w.endISO} title={`wk ending ${w.endISO} · ${w.ex != null ? w.ex + ' avg min/day' : 'no data'}`}
-                    style={{ height: w.ex != null ? `${Math.max(6, (w.ex / trends.maxWkEx) * 100)}%` : '2px' }} />
-                ))}
-              </div>
-            </div>
+            ))}
           </section>
         )}
 
