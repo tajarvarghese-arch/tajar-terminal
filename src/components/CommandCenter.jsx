@@ -1793,6 +1793,22 @@ export default function CommandCenter() {
                   </span>
                 ))}
               </div>
+              {/* whole-book heat signature — one block per position,
+                  intensity by move size; tap opens the book */}
+              <div className="heat" role="button" tabIndex={0} aria-label="Book heat map — open positions"
+                onClick={() => setMktOpen(true)} onKeyDown={keyActivate(() => setMktOpen(true))}>
+                {(() => {
+                  const maxAbs = Math.max(0.01, ...rows.map((r) => Math.abs(r.chgPct)))
+                  return rows.map((r) => {
+                    const a = 0.18 + 0.72 * (Math.abs(r.chgPct) / maxAbs)
+                    const rgb = r.chgPct >= 0 ? '61, 220, 132' : '255, 69, 58'
+                    return (
+                      <i key={r.sym} title={`${r.sym} ${pct(r.chgPct)}`}
+                        style={{ background: `rgba(${rgb}, ${a.toFixed(2)})` }} />
+                    )
+                  })
+                })()}
+              </div>
             </div>
           ) : (
             <div className="pf-table">
