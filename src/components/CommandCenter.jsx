@@ -269,6 +269,22 @@ const QUOTES = [
   { t: 'Rock bottom became the solid foundation on which I rebuilt my life.', by: 'J.K. Rowling' },
   { t: 'One day at a time. Today is the one.', by: '—' },
   { t: 'He who has a why to live can bear almost any how.', by: 'Nietzsche' },
+  { t: 'You could leave life right now. Let that determine what you do and say.', by: 'Marcus Aurelius' },
+  { t: 'When you arise in the morning, think of what a privilege it is to be alive.', by: 'Marcus Aurelius' },
+  { t: 'We are what we repeatedly do.', by: 'after Aristotle' },
+  { t: 'Well begun is half done.', by: 'Aristotle' },
+  { t: 'He who is brave is free.', by: 'Seneca' },
+  { t: 'Conquer yourself rather than the world.', by: 'Descartes' },
+  { t: 'Make haste slowly.', by: 'Augustus' },
+  { t: 'Courage is knowing what not to fear.', by: 'after Plato' },
+  { t: 'No man steps in the same river twice.', by: 'Heraclitus' },
+  { t: 'The wound is the place where the light enters you.', by: 'Rumi' },
+  { t: 'Do the next right thing.', by: '—' },
+  { t: 'Just for today.', by: '—' },
+  { t: 'This too shall pass.', by: 'proverb' },
+  { t: 'The best time to plant a tree was twenty years ago. The second best time is now.', by: 'proverb' },
+  { t: 'Slow is smooth, smooth is fast.', by: '—' },
+  { t: 'First we make our habits, then our habits make us.', by: '—' },
 ]
 
 /* ---------- date + number helpers ---------- */

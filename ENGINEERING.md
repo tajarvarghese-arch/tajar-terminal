@@ -101,9 +101,11 @@ updates the checkboxes before ending.
       snapshot (todos, horizon, streaks, log, reasons, vitals history)
       as a dated JSON file. Ownership guarantee: the data is always
       leavable.
-- [ ] Grounding quote bank: expand from 14 to ~30 curated lines
-      (stoic/recovery register, no saccharine), keeping day-of-year
-      rotation.
+- [x] Grounding quote bank: 14 → 30 curated lines (stoic/recovery
+      register), day-of-year rotation unchanged — repeats now monthly
+      instead of biweekly. NOTE: user rejected the inverted block
+      headers from the visible loop — de-boxed same day; numbering,
+      domain colors, and glow survive on text + marker instead.
 - [ ] Streak depth: show best-ever run alongside the current one
       (dim `BEST nD`) — habits only, never sobriety.
 
