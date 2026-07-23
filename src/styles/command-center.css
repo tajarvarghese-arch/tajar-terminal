@@ -1140,31 +1140,36 @@ table.book tr.subtotal td:first-child {
 .mkt-strip .movers { display: flex; flex-wrap: wrap; gap: 12px; padding: 9px 12px; font-size: 11px; }
 .mkt-strip .movers .mv b { color: var(--amber); letter-spacing: 0.5px; }
 .mkt-strip .movers .mv .sp { display: inline-block; vertical-align: -3px; margin-left: 6px; }
-.mkt-strip .heat {
+.mkt-strip .heatmap {
   flex-basis: 100%;
-  display: flex;
-  gap: 2px;
-  padding: 0 12px 9px;
+  position: relative;
+  margin: 0 12px 9px;
   cursor: pointer;
+  background: var(--bg);
 }
-.mkt-strip .heat i {
-  height: 20px;
-  flex-basis: 0;
-  min-width: 3px;
+.mkt-strip .heatmap i {
+  position: absolute;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   font-style: normal;
+  gap: 1px;
 }
-.mkt-strip .heat i span {
-  font-size: 9px;
+.mkt-strip .heatmap i b {
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.5px;
   color: var(--text);
   white-space: nowrap;
 }
-.mkt-strip.closed .heat { filter: saturate(0.35); }
+.mkt-strip .heatmap i span {
+  font-size: 9px;
+  color: rgba(236, 227, 208, 0.75);
+  white-space: nowrap;
+}
+.mkt-strip.closed .heatmap { filter: saturate(0.35); }
 /* closed session = frozen prices; dim them so the strip doesn't feign liveness */
 .mkt-strip.closed .cell b,
 .mkt-strip.closed .movers .mv b,

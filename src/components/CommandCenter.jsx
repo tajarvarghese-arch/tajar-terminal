@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { mergeState, normTodos, normHorizon, normStreaks } from '../lib/sync'
 import { marketState } from '../lib/market'
+import { layoutTreemap } from '../lib/treemap'
 import '../styles/command-center.css'
 
 /* ============================================================
@@ -174,6 +175,49 @@ function Boot({ done }) {
           {l}{i === count - 1 && <span className="cursor" />}
         </p>
       ))}
+    </div>
+  )
+}
+
+/* book treemap — squarified: area = position weight, color = day move */
+function BookHeatMap({ rows, onOpen, keyActivate, pctFn, usdFn }) {
+  const boxRef = useRef(null)
+  const [w, setW] = useState(0)
+  useEffect(() => {
+    const el = boxRef.current
+    if (!el) return
+    const measure = () => setW(el.clientWidth)
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  const h = Math.round(Math.min(150, Math.max(96, w * 0.16)))
+  const rects = useMemo(() => {
+    if (!w) return []
+    return layoutTreemap(rows.map((r) => ({ r, key: r.sym, weight: Math.abs(r.mv) })), w, h)
+  }, [rows, w, h])
+  const maxAbs = Math.max(0.01, ...rows.map((r) => Math.abs(r.chgPct)))
+  return (
+    <div className="heatmap" ref={boxRef} style={{ height: h }} role="button" tabIndex={0}
+      aria-label="Book heat map — open positions" onClick={onOpen} onKeyDown={keyActivate(onOpen)}>
+      {rects.map(({ r, x, y, w: rw, h: rh }) => {
+        const a = 0.18 + 0.72 * (Math.abs(r.chgPct) / maxAbs)
+        const rgb = r.chgPct >= 0 ? '61, 220, 132' : '255, 69, 58'
+        const showSym = rw >= 34 && rh >= 14
+        const showPct = rw >= 44 && rh >= 30
+        return (
+          <i key={r.sym}
+            title={`${r.sym} ${pctFn(r.chgPct)} · ${usdFn(Math.abs(r.mv))}`}
+            style={{
+              left: x, top: y, width: Math.max(0, rw - 1), height: Math.max(0, rh - 1),
+              background: `rgba(${rgb}, ${a.toFixed(2)})`,
+            }}>
+            {showSym && <b>{r.sym}</b>}
+            {showPct && <span>{pctFn(r.chgPct)}</span>}
+          </i>
+        )
+      })}
     </div>
   )
 }
@@ -1844,29 +1888,10 @@ export default function CommandCenter() {
                   </span>
                 ))}
               </div>
-              {/* whole-book heat signature — width = position weight,
+              {/* whole-book squarified treemap — area = position weight,
                   color intensity = move size; tap opens the book */}
-              <div className="heat" role="button" tabIndex={0} aria-label="Book heat map — open positions"
-                onClick={() => setMktOpen(true)} onKeyDown={keyActivate(() => setMktOpen(true))}>
-                {(() => {
-                  const maxAbs = Math.max(0.01, ...rows.map((r) => Math.abs(r.chgPct)))
-                  const gross = Math.max(1, rows.reduce((s, r) => s + Math.abs(r.mv), 0))
-                  return [...rows]
-                    .sort((a, b) => Math.abs(b.mv) - Math.abs(a.mv))
-                    .map((r) => {
-                      const weight = Math.abs(r.mv) / gross
-                      const a = 0.18 + 0.72 * (Math.abs(r.chgPct) / maxAbs)
-                      const rgb = r.chgPct >= 0 ? '61, 220, 132' : '255, 69, 58'
-                      return (
-                        <i key={r.sym}
-                          title={`${r.sym} ${pct(r.chgPct)} · ${usdShort(Math.abs(r.mv))} (${(weight * 100).toFixed(1)}% of gross)`}
-                          style={{ flexGrow: Math.max(1, Math.round(weight * 1000)), background: `rgba(${rgb}, ${a.toFixed(2)})` }}>
-                          {weight >= 0.05 && <span>{r.sym}</span>}
-                        </i>
-                      )
-                    })
-                })()}
-              </div>
+              <BookHeatMap rows={rows} onOpen={() => setMktOpen(true)}
+                keyActivate={keyActivate} pctFn={pct} usdFn={usdShort} />
             </div>
           ) : (
             <div className="pf-table">
