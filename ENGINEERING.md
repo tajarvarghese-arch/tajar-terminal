@@ -91,10 +91,10 @@ updates the checkboxes before ending.
       Design rider: hover affordance on the sober and sync chips.
 - [x] Expanded book view: LONG/SHORT group rails with GROSS LONG,
       GROSS SHORT, and NET subtotal rows (5 long / 11 short today).
-- [ ] Lighthouse pass: NOT run as a real audit (no headless Chrome in
-      the loop environment). Quick wins shipped instead: noscript
-      fallback, font display=swap already present, preconnects present.
-      Run an actual Lighthouse audit from a browser when convenient.
+- [x] Lighthouse pass — real audits, before → after:
+      Perf 86→94, A11y 90→96, Best Practices 100, SEO 100;
+      CLS 0.266→0 (placeholder-reserved async strips), AA contrast
+      (--dim #8a8272), <main> landmark, touch-target hygiene.
 
 ### P3 — added by the loop (round 3, user-approved batch)
 - [ ] Data export: DOWNLOAD ARCHIVE in the footer — full personal
