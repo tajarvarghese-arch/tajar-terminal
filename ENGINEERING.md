@@ -120,6 +120,18 @@ updates the checkboxes before ending.
 - [x] D5 Graphic details: weather glyphs get proportional stroke
       (2.4 at ≤14px), chart columns grounded with a baseline rule.
 
+### Visible loop (round 5, user-directed: "all 3 tastefully")
+- [x] V1 Typographic drama: inverted function-row headers (black caps
+      on amber/cyan/green blocks with phosphor bloom), numbered
+      sections 01–09, focus line 20→26px.
+- [x] V2 CRT texture: brand + clock glow, scanlines deepened
+      (0.15/0.35 → 0.18/0.45), corner vignette.
+- [x] V3 Instruments: intraday sparklines beside movers (real Yahoo
+      5-min closes via api/quote spark passthrough, downsample tested),
+      24h tide curve with NOW dot (cosine-interpolated NOAA extremes),
+      daylight-spent gauge under the clock, steps-vs-10K micro meter.
+      Quote attribution suppressed for anonymous lines.
+
 ### Discovered (loop appends here; user triages into P0–P2)
 - [x] Captain's log capped at 10 entries with no way to read history
       (grows daily via focus archiving) → SHOW ALL/SHOW RECENT toggle;

@@ -56,10 +56,20 @@
     to bottom,
     rgba(0, 0, 0, 0) 0,
     rgba(0, 0, 0, 0) 2px,
-    rgba(0, 0, 0, 0.15) 3px
+    rgba(0, 0, 0, 0.18) 3px
   );
   z-index: 50;
-  opacity: 0.35;
+  opacity: 0.45;
+}
+
+/* CRT vignette — the glass darkens toward the corners */
+.term::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 120% 100% at 50% 45%, transparent 62%, rgba(0, 0, 0, 0.38) 100%);
+  z-index: 51;
 }
 
 /* ---------- TOP BAR ---------- */
@@ -88,6 +98,7 @@
   font-weight: 700;
   letter-spacing: 2px;
   font-size: 15px;
+  text-shadow: 0 0 9px rgba(255, 171, 0, 0.45);
 }
 /* the home-screen glyph, alive: orange prompt + blinking green cursor */
 .bar-brand .glyph {
@@ -175,8 +186,25 @@
   align-items: center;
   gap: 10px;
   border-left: 1px solid var(--line);
+  position: relative;
 }
-.bar-clock time { font-size: 15px; font-weight: 700; letter-spacing: 1px; color: var(--amber); }
+/* daylight spent — a 2px instrument under the clock row */
+.day-gauge {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 2px;
+  background: var(--line);
+}
+.day-gauge b { display: block; height: 100%; background: var(--amber-dim); }
+
+/* steps-vs-10K micro meter */
+.self-stat .meter {
+  width: 34px; height: 3px;
+  background: var(--line);
+  display: inline-block;
+}
+.self-stat .meter i { display: block; height: 100%; background: var(--up); }
+.bar-clock time { font-size: 15px; font-weight: 700; letter-spacing: 1px; color: var(--amber); text-shadow: 0 0 9px rgba(255, 171, 0, 0.4); }
 .mkt {
   font-size: 10px;
   letter-spacing: 1px;
@@ -276,21 +304,26 @@
   background: var(--panel-2);
   gap: 10px;
 }
+/* inverted function-row header — the classic terminal move:
+   black caps on an amber block, with a faint phosphor bloom */
 .panel-head h2 {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 2px;
-  color: var(--amber);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.panel-head h2::before {
-  content: '';
-  width: 9px; height: 9px;
+  color: #0a0908;
   background: var(--amber);
-  display: inline-block;
+  padding: 3px 8px;
+  display: inline-flex;
+  align-items: center;
+  box-shadow: 0 0 14px rgba(255, 171, 0, 0.22);
 }
+.panel-head h2 .fn {
+  font-weight: 400;
+  opacity: 0.55;
+  margin-right: 7px;
+}
+.panel.fam .panel-head h2 { background: var(--fam); box-shadow: 0 0 14px rgba(87, 199, 255, 0.20); }
+.panel.health .panel-head h2 { background: var(--up); box-shadow: 0 0 14px rgba(61, 220, 132, 0.20); }
 .panel-head .meta { font-size: 10px; color: var(--dim); letter-spacing: 1px; }
 .panel-head .meta b { color: var(--text); }
 
@@ -621,12 +654,15 @@ table.book tr.subtotal td:first-child {
 }
 .focus u button:hover { color: var(--amber); }
 .focus h1 {
-  font-size: 20px;
+  font-size: 26px;
   font-weight: 700;
-  line-height: 1.25;
+  line-height: 1.2;
   margin-top: 7px;
   color: var(--text);
   letter-spacing: 0.5px;
+}
+@media (max-width: 640px) {
+  .focus h1 { font-size: 21px; }
 }
 .focus h1.empty { color: var(--dim); font-weight: 400; cursor: pointer; }
 .focus .edit-row { display: flex; gap: 8px; margin-top: 7px; }
@@ -791,11 +827,9 @@ table.book tr.subtotal td:first-child {
 
 /* health panels carry the life-green marker (amber = structure,
    green = body/live, red = losses only, cyan = family) */
-.panel.health .panel-head h2::before { background: var(--up); }
 
 /* ---------- FAMILY calendar accent (cyan vs personal amber) ---------- */
 .panel.fam .panel-head h2 { color: var(--fam); }
-.panel.fam .panel-head h2::before { background: var(--fam); }
 .panel.fam .week-day b { color: var(--fam); }
 .panel.fam .week-items p span { color: var(--fam-dim); }
 
@@ -994,6 +1028,7 @@ table.book tr.subtotal td:first-child {
 .mkt-strip .cell b { font-size: 13px; font-weight: 700; }
 .mkt-strip .movers { display: flex; flex-wrap: wrap; gap: 12px; padding: 9px 12px; font-size: 11px; }
 .mkt-strip .movers .mv b { color: var(--amber); letter-spacing: 0.5px; }
+.mkt-strip .movers .mv .sp { display: inline-block; vertical-align: -3px; margin-left: 6px; }
 /* closed session = frozen prices; dim them so the strip doesn't feign liveness */
 .mkt-strip.closed .cell b,
 .mkt-strip.closed .movers .mv b,

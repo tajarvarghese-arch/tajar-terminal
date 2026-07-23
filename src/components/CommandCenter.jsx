@@ -149,6 +149,50 @@ function ExIcon({ size = 12 }) {
   )
 }
 
+/* intraday sparkline — inherits its color from the surrounding chg span */
+function Spark({ data, w = 54, h = 15 }) {
+  if (!data || data.length < 2) return null
+  const min = Math.min(...data), max = Math.max(...data), span = max - min || 1
+  const pts = data.map((v, i) =>
+    `${((i / (data.length - 1)) * w).toFixed(1)},${(1 + (h - 2) * (1 - (v - min) / span)).toFixed(1)}`)
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} style={{ width: w, height: h, display: 'block' }} aria-hidden="true">
+      <polyline points={pts.join(' ')} fill="none" stroke="currentColor" strokeWidth="1.2" opacity="0.9" />
+    </svg>
+  )
+}
+
+/* 24h tide curve — cosine-interpolated between NOAA extremes, NOW dot */
+function TideCurve({ tides, now, w = 108, h = 20 }) {
+  const t0 = now.getTime() - 3 * 3600e3
+  const t1 = t0 + 24 * 3600e3
+  const evs = tides.filter((t) => t.when.getTime() > t0 - 8 * 3600e3 && t.when.getTime() < t1 + 8 * 3600e3)
+  if (evs.length < 2) return null
+  const fts = evs.map((e) => e.ft)
+  const min = Math.min(...fts), max = Math.max(...fts), span = max - min || 1
+  const yOf = (ft) => 1 + (h - 2) * (1 - (ft - min) / span)
+  const ftAt = (tm) => {
+    let a = evs[0], b = evs[evs.length - 1]
+    for (let i = 0; i < evs.length - 1; i++) {
+      if (evs[i].when.getTime() <= tm && evs[i + 1].when.getTime() >= tm) { a = evs[i]; b = evs[i + 1]; break }
+    }
+    const ta = a.when.getTime(), tb = b.when.getTime()
+    if (tm <= ta) return a.ft
+    if (tm >= tb) return b.ft
+    const u = (tm - ta) / (tb - ta)
+    return a.ft + (b.ft - a.ft) * (1 - Math.cos(Math.PI * u)) / 2
+  }
+  const pts = []
+  for (let x = 0; x <= w; x += 3) pts.push(`${x},${yOf(ftAt(t0 + (x / w) * (t1 - t0))).toFixed(1)}`)
+  const nowX = ((now.getTime() - t0) / (t1 - t0)) * w
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} style={{ width: w, height: h, display: 'block' }} aria-hidden="true">
+      <polyline points={pts.join(' ')} fill="none" stroke="#8a8272" strokeWidth="1.2" />
+      <circle cx={nowX.toFixed(1)} cy={yOf(ftAt(now.getTime())).toFixed(1)} r="2.2" fill="#ffab00" />
+    </svg>
+  )
+}
+
 /* Schedule from the connected Google Calendar. SCHEDULE_FOR stamps the
    day it was synced for — past that date the panel says so instead of
    showing another day's events as today's. Agent refreshes both daily. */
@@ -698,7 +742,12 @@ export default function CommandCenter() {
           cur.map((p) => {
             const q = data.quotes[p.yh]
             if (!q || typeof q.price !== 'number') return p
-            return { ...p, last: q.price, prevClose: typeof q.prevClose === 'number' ? q.prevClose : p.prevClose }
+            return {
+              ...p,
+              last: q.price,
+              prevClose: typeof q.prevClose === 'number' ? q.prevClose : p.prevClose,
+              ...(Array.isArray(q.spark) && q.spark.length >= 2 ? { spark: q.spark } : {}),
+            }
           })
         )
         setLive(true)
@@ -1001,8 +1050,9 @@ export default function CommandCenter() {
             return (
               <span className="self-stats">
                 {v.steps != null && (
-                  <span className={`self-stat ${yda ? 'yda' : ''}`} title={`Steps · ${hint}`}>
+                  <span className={`self-stat ${yda ? 'yda' : ''}`} title={`Steps · ${hint} · meter vs 10K`}>
                     <StepsIcon /><b>{v.steps.toLocaleString()}</b>
+                    <span className="meter"><i style={{ width: `${Math.min(100, (v.steps / 10000) * 100)}%` }} /></span>
                   </span>
                 )}
                 {v.exercise != null && (
@@ -1017,6 +1067,18 @@ export default function CommandCenter() {
           <button className="sober-chip" onClick={() => setEditSober((v) => !v)} title="Sober day counter — tap to set start date">
             SOBER <b>{sober.days}D</b>
           </button>
+          {wx && (() => {
+            const [srH, srM] = wx.sunrise.split(':').map(Number)
+            const [ssH, ssM] = wx.sunset.split(':').map(Number)
+            const [nH, nM] = nowHM.split(':').map(Number)
+            const dayPct = Math.max(0, Math.min(100,
+              (((nH * 60 + nM) - (srH * 60 + srM)) / (((ssH * 60 + ssM) - (srH * 60 + srM)) || 1)) * 100))
+            return (
+              <i className="day-gauge" title={`Daylight ${Math.round(dayPct)}% spent`}>
+                <b style={{ width: `${dayPct}%` }} />
+              </i>
+            )
+          })()}
           {editSober && (
             <span className="sober-date-edit" style={{ marginTop: 0 }}>
               <input type="date" value={soberStart} aria-label="Sobriety start date" max={new Intl.DateTimeFormat('en-CA').format(now)}
@@ -1073,7 +1135,7 @@ export default function CommandCenter() {
         {/* ---------- TODAY ---------- */}
         <section className="panel span-2">
           <div className="panel-head">
-            <h2>TODAY · {dateStr}</h2>
+            <h2><span className="fn">01</span>TODAY · {dateStr}</h2>
             <span className="meta">{todaySchedule.length} EVENT{todaySchedule.length === 1 ? '' : 'S'} · <b>{openTodos}</b> TO DO</span>
           </div>
 
@@ -1114,6 +1176,10 @@ export default function CommandCenter() {
             <span title={nextTide.low ? `Next low tide · Cos Cob Harbor · ${nextTide.low.ft} ft` : undefined}>
               <u>LOW TIDE</u>
               <b className="tide-lo">{nextTide.low ? <>▼ {nextTide.low.at}{nextTide.low.tmrw ? '+1' : ''} <i>{nextTide.low.ft}FT</i></> : '—'}</b>
+            </span>
+            <span className="tide-curve" title="Tide, next 24h · Cos Cob Harbor">
+              <u>TIDE 24H</u>
+              {tides.length >= 2 ? <TideCurve tides={tides} now={now} /> : <b className="muted">—</b>}
             </span>
           </div>
 
@@ -1220,7 +1286,7 @@ export default function CommandCenter() {
           const weekPanel = (title, rows, fam, emptyText) => (
             <section className={`panel ${fam ? 'fam' : ''}`}>
               <div className="panel-head">
-                <h2>{title}</h2>
+                <h2><span className="fn">02</span>{title}</h2>
                 <span className="meta">{weekMeta}</span>
               </div>
               <div className="week-list">
@@ -1245,7 +1311,7 @@ export default function CommandCenter() {
           return (
             <section className="panel span-2">
               <div className="panel-head">
-                <h2>WEEK AHEAD</h2>
+                <h2><span className="fn">02</span>WEEK AHEAD</h2>
                 <span className="meta">{weekMeta}</span>
               </div>
               <div className="week-grid-head">
@@ -1282,7 +1348,7 @@ export default function CommandCenter() {
         {/* ---------- HORIZON ---------- */}
         <section className="panel">
           <div className="panel-head">
-            <h2>HORIZON · NEXT WEEKS</h2>
+            <h2><span className="fn">03</span>HORIZON · NEXT WEEKS</h2>
             <span className="meta">GOALS &amp; OBLIGATIONS</span>
           </div>
           <div className="hz-add">
@@ -1325,7 +1391,7 @@ export default function CommandCenter() {
         {/* ---------- STREAKS ---------- */}
         <section className="panel">
           <div className="panel-head">
-            <h2>STREAKS · 28D</h2>
+            <h2><span className="fn">04</span>STREAKS · 28D</h2>
             <span className="meta">TAP A ROW = DONE TODAY</span>
           </div>
           <div className="streak-list">
@@ -1367,7 +1433,7 @@ export default function CommandCenter() {
         {/* ---------- CAPTAIN'S LOG ---------- */}
         <section className="panel">
           <div className="panel-head">
-            <h2>CAPTAIN&rsquo;S LOG</h2>
+            <h2><span className="fn">05</span>CAPTAIN&rsquo;S LOG</h2>
             <span className="meta">{logEntries.length} ENTRIES</span>
           </div>
           <div className="todo-add">
@@ -1396,7 +1462,7 @@ export default function CommandCenter() {
         {syncKey && (
           <section className="panel health">
             <div className="panel-head">
-              <h2>VITALS · 28D</h2>
+              <h2><span className="fn">06</span>VITALS · 28D</h2>
               <span className="meta">{vitalsHist ? `${vitalsHist.logged} DAYS LOGGED` : 'AWAITING SYNC'}</span>
             </div>
             {!vitalsHist || vitalsHist.logged === 0 ? (
@@ -1438,7 +1504,7 @@ export default function CommandCenter() {
         {syncKey && trends && trends.logged >= 45 && (
           <section className="panel health">
             <div className="panel-head">
-              <h2>TRENDS · 12W</h2>
+              <h2><span className="fn">07</span>TRENDS · 12W</h2>
               <span className="meta">{trends.logged.toLocaleString()} DAYS OF HISTORY</span>
             </div>
             <div className="chart-block">
@@ -1473,13 +1539,13 @@ export default function CommandCenter() {
         {/* ---------- GROUNDING (span depends on panel parity above) ---------- */}
         <section className={`panel ${!syncKey || hasFam ? 'span-2' : ''}`}>
           <div className="panel-head">
-            <h2>GROUNDING</h2>
+            <h2><span className="fn">08</span>GROUNDING</h2>
             <span className="meta">WHY</span>
           </div>
           <div className="ground">
             <div className="quote">
               <p>&ldquo;{quote.t}&rdquo;</p>
-              <cite>&mdash; {quote.by}</cite>
+              {quote.by !== '—' && <cite>&mdash; {quote.by}</cite>}
             </div>
             {why && (
               <div className="why-line">
@@ -1509,7 +1575,7 @@ export default function CommandCenter() {
         {/* ---------- MARKETS (collapsed strip) ---------- */}
         <section className="panel span-2">
           <div className="panel-head mkt-head" onClick={() => setMktOpen((v) => !v)}>
-            <h2>MARKETS</h2>
+            <h2><span className="fn">09</span>MARKETS</h2>
             <span className="meta">
               <span className={`mkt ${marketStatus.open ? 'open' : 'closed'}`}><i className="dot" />{marketStatus.label}</span>
               {' '}· NETLIQ <b>{usdShort(mkt.netLiq)}</b> · <span className={cls(mkt.dayPnl)}>{pct(mkt.dayPct)}</span>
@@ -1523,7 +1589,11 @@ export default function CommandCenter() {
               <div className="movers">
                 {mkt.movers.map((m) => (
                   <span className="mv" key={m.sym}>
-                    <b>{m.sym}</b> <span className={cls(m.chgPct)}>{pct(m.chgPct)}</span>
+                    <b>{m.sym}</b>{' '}
+                    <span className={cls(m.chgPct)}>
+                      {pct(m.chgPct)}
+                      {m.spark && <i className="sp"><Spark data={m.spark} /></i>}
+                    </span>
                   </span>
                 ))}
               </div>
