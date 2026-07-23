@@ -119,8 +119,23 @@ export default {
   }
 }
 
+const buildId = Date.now().toString(36)
+
+function versionFile() {
+  return {
+    name: 'version-file',
+    async closeBundle() {
+      await mkdir('dist', { recursive: true })
+      await writeFile('dist/version.json', JSON.stringify({ build: buildId }))
+    }
+  }
+}
+
 export default defineConfig({
-  plugins: [react(), sitesWorker()],
+  plugins: [react(), sitesWorker(), versionFile()],
+  define: {
+    __BUILD__: JSON.stringify(buildId)
+  },
   server: {
     open: false,
     port: 3000,

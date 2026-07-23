@@ -52,10 +52,9 @@ updates the checkboxes before ending.
       amber-on-black TERMINAL FAULT screen with the error text and a
       RELOAD button. Verifiable crash seam: set localStorage
       `tajar-crash-test` and reload.
-- [ ] Version-aware wake reload: embed the build hash at build time
-      (e.g. define __BUILD__), serve it in a tiny `/version.json`;
-      on wake, if the served hash differs from the running one,
-      `location.reload()` so home-screen apps stop running stale code.
+- [x] Version-aware wake reload: __BUILD__ define + dist/version.json
+      emitted per build; wake handler fetches it (no-store) and reloads
+      when the served id differs from the compiled one.
 - [ ] Fuzzy-dedupe calendar events: same start time + near-identical
       titles (case/punctuation-insensitive prefix match) should render
       once — the user's calendar has literal duplicates (3× Phish).

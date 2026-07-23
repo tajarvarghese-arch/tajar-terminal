@@ -373,6 +373,20 @@ export default function CommandCenter() {
     return () => clearInterval(t)
   }, [])
 
+  /* stale-build check — resumed home-screen pages keep running old code
+     indefinitely; on each wake, compare the served build id against the
+     one compiled into this bundle and reload if they differ. */
+  const versionCheck = () => {
+    fetch('/version.json', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((v) => {
+        if (v?.build && typeof __BUILD__ !== 'undefined' && v.build !== __BUILD__) {
+          window.location.reload()
+        }
+      })
+      .catch(() => { /* dev server has no version.json */ })
+  }
+
   /* wake refresh — iOS resumes the frozen page when the home-screen icon
      is tapped; bumping this tick makes every data effect re-pull
      immediately on wake (throttled to once per 15 s). */
@@ -384,6 +398,7 @@ export default function CommandCenter() {
       if (Date.now() - lastWake.current < 15000) return
       lastWake.current = Date.now()
       setRefreshTick((t) => t + 1)
+      versionCheck()
     }
     document.addEventListener('visibilitychange', wake)
     window.addEventListener('pageshow', wake)
