@@ -1156,6 +1156,27 @@ export default function CommandCenter() {
     setTimeout(() => marketsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60)
   }
 
+  /* ---------- function-key dock (phone) ----------
+     Bloomberg keyboards had an F-key row; a phone has a thumb zone.
+     Fixed bottom rail: > opens the command line, F1–F5 jump to desks. */
+  const [activeSec, setActiveSec] = useState('today')
+  const jumpSec = (sec) => {
+    if (sec === 'book') { jumpToBook(); return }
+    document.querySelector(`[data-sec="${sec}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+  useEffect(() => {
+    const els = [...document.querySelectorAll('[data-sec]')]
+    if (!els.length || typeof IntersectionObserver === 'undefined') return
+    /* band across the upper-middle of the viewport decides the active desk */
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting) { setActiveSec(e.target.getAttribute('data-sec')); break }
+      }
+    }, { rootMargin: '-25% 0px -55% 0px' })
+    els.forEach((el) => io.observe(el))
+    return () => io.disconnect()
+  }, [hasFam])
+
   /* all habits logged today: the masthead cursor stops blinking and
      holds solid green — the day's quiet checkmark */
   const allHabitsDone = visibleHabits.length > 0 && visibleHabits.every((h) => onDates(h.id).has(todayISO))
@@ -1367,7 +1388,7 @@ export default function CommandCenter() {
 
       <main className="term-grid">
         {/* ---------- TODAY ---------- */}
-        <section className="panel span-2">
+        <section className="panel span-2" data-sec="today">
           <div className="panel-head">
             <h2><span className="fn">01</span>TODAY · {dateStr}</h2>
             <span className="meta">{todaySchedule.length} EVENT{todaySchedule.length === 1 ? '' : 'S'} · <b>{openTodos}</b> TO DO</span>
@@ -1501,7 +1522,7 @@ export default function CommandCenter() {
         {/* ---------- WEEK AHEAD (personal | family side by side) ---------- */}
         {(() => {
           const weekPanel = (title, rows, fam, emptyText) => (
-            <section className={`panel ${fam ? 'fam' : ''}`}>
+            <section className={`panel ${fam ? 'fam' : ''}`} data-sec="week">
               <div className="panel-head">
                 <h2><span className="fn">02</span>{title}</h2>
                 <span className="meta">{weekMeta}</span>
@@ -1526,7 +1547,7 @@ export default function CommandCenter() {
           if (!hasFam) return weekPanel('WEEK AHEAD', weekRows, false, 'Week not synced — awaiting the morning refresh.')
           /* one grid, shared day rail — days line up across both columns */
           return (
-            <section className="panel span-2">
+            <section className="panel span-2" data-sec="week">
               <div className="panel-head">
                 <h2><span className="fn">02</span>WEEK AHEAD</h2>
                 <span className="meta">{weekMeta}</span>
@@ -1606,7 +1627,7 @@ export default function CommandCenter() {
         </section>
 
         {/* ---------- STREAKS ---------- */}
-        <section className="panel">
+        <section className="panel" data-sec="habit">
           <div className="panel-head">
             <h2><span className="fn">04</span>STREAKS · 28D</h2>
             <span className="meta">TAP A ROW = DONE TODAY</span>
@@ -1648,7 +1669,7 @@ export default function CommandCenter() {
         </section>
 
         {/* ---------- CAPTAIN'S LOG ---------- */}
-        <section className="panel">
+        <section className="panel" data-sec="log">
           <div className="panel-head">
             <h2><span className="fn">05</span>CAPTAIN&rsquo;S LOG</h2>
             <span className="meta">{logEntries.length} ENTRIES</span>
@@ -1787,7 +1808,7 @@ export default function CommandCenter() {
         </section>
 
         {/* ---------- MARKETS (collapsed strip) ---------- */}
-        <section className="panel span-2" ref={marketsRef}>
+        <section className="panel span-2" ref={marketsRef} data-sec="book">
           <div className="panel-head mkt-head" onClick={() => setMktOpen((v) => !v)}>
             <h2><span className="fn">09</span>MARKETS</h2>
             <span className="meta">
@@ -1888,6 +1909,26 @@ export default function CommandCenter() {
           </button>
         )}
       </footer>
+
+      {/* ---------- FUNCTION-KEY DOCK (phone only) ----------
+          the terminal's F-key row, relocated to the thumb zone */}
+      <nav className="dock" aria-label="Quick navigation">
+        <button className="dock-cmd" onClick={() => setCmdOpen(true)} aria-label="Open command line">
+          <b>&gt;_</b>
+        </button>
+        {[
+          ['today', 'F1', 'TODAY'],
+          ['week', 'F2', 'WEEK'],
+          ['habit', 'F3', 'HABIT'],
+          ['log', 'F4', 'LOG'],
+          ['book', 'F5', 'BOOK'],
+        ].map(([sec, fk, label]) => (
+          <button key={sec} className={activeSec === sec ? 'on' : ''} onClick={() => jumpSec(sec)}>
+            <u>{fk}</u>
+            <b>{label}</b>
+          </button>
+        ))}
+      </nav>
     </div>
   )
 }
