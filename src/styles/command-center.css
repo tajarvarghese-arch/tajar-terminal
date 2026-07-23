@@ -62,6 +62,27 @@
   opacity: 0.45;
 }
 
+/* ---------- NIGHT WATCH — the display softens after sunset ---------- */
+.term.night {
+  --amber: #e29a06;
+}
+.term.night::before { opacity: 0.28; }
+.term.night::after {
+  background: radial-gradient(ellipse 120% 100% at 50% 45%, transparent 55%, rgba(0, 0, 0, 0.52) 100%);
+}
+.term.night .bar-brand b,
+.term.night .bar-clock time,
+.term.night .panel-head h2 { text-shadow: none; }
+.term.night .panel-head h2::before { box-shadow: none; }
+.night-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--dim);
+  font-size: 10px;
+  letter-spacing: 2px;
+}
+
 /* command line — press / or tap the glyph */
 .cmdline {
   position: fixed;

@@ -1103,6 +1103,18 @@ export default function CommandCenter() {
 
   const openTodos = todos.filter((t) => !t.del && !t.done).length
 
+  /* night watch — after real sunset (or before sunrise) the display
+     softens: no glow, quieter scanlines, deeper vignette, dimmer amber.
+     ?night=1 forces it for testing. */
+  const isNight = useMemo(() => {
+    try {
+      if (new URLSearchParams(window.location.search).has('night')) return true
+    } catch { /* noop */ }
+    if (wx?.sunrise && wx?.sunset) return nowHM < wx.sunrise || nowHM >= wx.sunset
+    const h = +nowHM.slice(0, 2)
+    return h >= 21 || h < 6
+  }, [wx, nowHM])
+
   /* ---------- command line ----------
      press / anywhere (or tap the masthead glyph) and drive the desk */
   const runCommand = (raw) => {
@@ -1169,7 +1181,7 @@ export default function CommandCenter() {
   }
 
   return (
-    <div className="term">
+    <div className={`term ${isNight ? 'night' : ''}`}>
       {booting && <Boot done={endBoot} />}
 
       {/* ---------- COMMAND LINE ---------- */}
@@ -1248,6 +1260,11 @@ export default function CommandCenter() {
           <button className="sober-chip" onClick={() => setEditSober((v) => !v)} title="Sober day counter — tap to set start date">
             SOBER <b>{sober.days}D</b>
           </button>
+          {isNight && (
+            <span className="night-mark" title="Night watch — display softened until sunrise">
+              <MoonIcon age={moonPhase(now).age} size={11} />NIGHT
+            </span>
+          )}
           {wx && (() => {
             const [srH, srM] = wx.sunrise.split(':').map(Number)
             const [ssH, ssM] = wx.sunset.split(':').map(Number)
