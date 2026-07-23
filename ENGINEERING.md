@@ -134,6 +134,18 @@ updates the checkboxes before ending.
       daylight-spent gauge under the clock, steps-vs-10K micro meter.
       Quote attribution suppressed for anonymous lines.
 
+### Creative loop (round 6, user-directed: "be more creative")
+- [x] C1 Boot sequence: ~1.3s three-line ritual (TERMINAL / LINK OK /
+      time-of-day greeting) on standalone launches only, once per
+      session, reduced-motion + tap skip, ?boot=1 test override.
+- [x] C2 Command line: / or glyph tap opens a prompt driving the desk —
+      FOCUS, TODO, GOAL (natural dates), LOG, DID <habit>, WHY, HABIT,
+      BOOK, HELP. All eight verbs verified end-to-end.
+- [x] C3 The log talks back: ON THIS DAY resurfaces the entry from a
+      year (or 30 days) ago inside the log panel — compounds as the
+      journal grows. Moon phase cell in the conditions strip (pure
+      astronomy, drawn terminator glyph, no API).
+
 ### Discovered (loop appends here; user triages into P0–P2)
 - [x] Captain's log capped at 10 entries with no way to read history
       (grows daily via focus archiving) → SHOW ALL/SHOW RECENT toggle;

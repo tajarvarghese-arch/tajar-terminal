@@ -222,6 +222,33 @@ function TideCurve({ tides, now, w = 108, h = 20 }) {
   )
 }
 
+/* moon phase — pure astronomy, no API. Age in days since new moon. */
+const SYNODIC = 29.530588853
+function moonPhase(now) {
+  const epoch = Date.UTC(2000, 0, 6, 18, 14) // known new moon
+  const age = (((now.getTime() - epoch) / 86400000) % SYNODIC + SYNODIC) % SYNODIC
+  const illum = Math.round(((1 - Math.cos((2 * Math.PI * age) / SYNODIC)) / 2) * 100)
+  const names = ['NEW', 'WAXING', 'FIRST QTR', 'WAXING GIB', 'FULL', 'WANING GIB', 'LAST QTR', 'WANING']
+  const idx = Math.round((age / SYNODIC) * 8) % 8
+  return { age, illum, name: names[idx] }
+}
+function MoonIcon({ age, size = 13 }) {
+  const phase = age / SYNODIC
+  const r = 6, cx = 8, cy = 8
+  const cosT = Math.cos(2 * Math.PI * phase)
+  const rx = Math.abs(cosT) * r
+  const litRight = phase < 0.5
+  const outerSweep = litRight ? 1 : 0
+  const termSweep = (cosT > 0) === litRight ? 0 : 1
+  const d = `M ${cx} ${cy - r} A ${r} ${r} 0 0 ${outerSweep} ${cx} ${cy + r} A ${rx.toFixed(2)} ${r} 0 0 ${termSweep} ${cx} ${cy - r} Z`
+  return (
+    <svg viewBox="0 0 16 16" style={{ width: size, height: size, display: 'block' }} aria-hidden="true">
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#3a362e" strokeWidth="1" />
+      <path d={d} fill="#8a8272" />
+    </svg>
+  )
+}
+
 /* Schedule from the connected Google Calendar. SCHEDULE_FOR stamps the
    day it was synced for — past that date the panel says so instead of
    showing another day's events as today's. Agent refreshes both daily. */
@@ -1056,6 +1083,17 @@ export default function CommandCenter() {
 
   /* captain's log — one line per day; saving again overwrites today's line */
   const todayLog = logEntries.find((e) => e.d === todayISO)
+
+  /* the log talks back: resurface what you wrote a year (or month) ago */
+  const echoEntry = useMemo(() => {
+    const at = (days) =>
+      logEntries.find((e) => e.d === isoOf(new Date(now.getFullYear(), now.getMonth(), now.getDate() - days)))
+    const y = at(365)
+    if (y) return { label: '1Y AGO TODAY', e: y }
+    const m = at(30)
+    if (m) return { label: '30D AGO TODAY', e: m }
+    return null
+  }, [logEntries, todayISO]) // eslint-disable-line react-hooks/exhaustive-deps
   const saveLog = () => {
     const text = logDraft.trim()
     if (!text) return
@@ -1324,6 +1362,15 @@ export default function CommandCenter() {
               <u>TIDE 24H</u>
               {tides.length >= 2 ? <TideCurve tides={tides} now={now} /> : <b className="muted">—</b>}
             </span>
+            {(() => {
+              const m = moonPhase(now)
+              return (
+                <span title={`Moon · ${m.illum}% illuminated · day ${Math.round(m.age)} of ${Math.round(SYNODIC)}`}>
+                  <u>MOON</u>
+                  <b className="moon-b"><MoonIcon age={m.age} />{m.name} <i>{m.illum}%</i></b>
+                </span>
+              )
+            })()}
           </div>
 
 
@@ -1585,6 +1632,12 @@ export default function CommandCenter() {
               placeholder={todayLog ? 'REWRITE TODAY’S LINE — PRESS ENTER' : 'ONE LINE ABOUT TODAY — PRESS ENTER'} />
             <button onClick={saveLog}>LOG</button>
           </div>
+          {echoEntry && (
+            <div className="echo">
+              <u>ON THIS DAY · {echoEntry.label}</u>
+              <p>&ldquo;{echoEntry.e.t}&rdquo;</p>
+            </div>
+          )}
           <div className="log-list">
             {logEntries.length === 0 && <div className="agenda-empty">No entries yet. One honest line a day.</div>}
             {(logExpanded ? logEntries : logEntries.slice(0, 10)).map((e) => (

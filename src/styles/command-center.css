@@ -1046,6 +1046,26 @@ table.book tr.subtotal td:first-child {
 }
 .log-more:hover { color: var(--amber); }
 
+/* ON THIS DAY — the log resurfacing itself */
+.echo {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--line);
+  background: #0d0c0a;
+}
+.echo u {
+  text-decoration: none;
+  color: var(--amber-dim);
+  font-size: 9px;
+  letter-spacing: 2px;
+  display: block;
+  margin-bottom: 4px;
+}
+.echo p { color: var(--dim); font-size: 12px; line-height: 1.5; }
+
+/* moon cell */
+.moon-b { display: flex; align-items: center; gap: 5px; }
+.moon-b i { font-style: normal; color: var(--dim); font-size: 10px; }
+
 /* ---------- VITALS TRACKER ---------- */
 .chart-block { padding: 9px 12px 12px; border-bottom: 1px solid var(--line); }
 .chart-label {
