@@ -1508,19 +1508,40 @@ export default function CommandCenter() {
                   <tr><th>SYMBOL</th><th>LAST</th><th>CHG%</th><th>DAY P&amp;L</th><th>MKT VAL</th></tr>
                 </thead>
                 <tbody>
-                  {[...rows].sort((a, b) => b.dayPnl - a.dayPnl).map((r) => (
-                    <tr key={r.sym}>
-                      <td className="sym">
-                        <b>{r.sym}</b>
-                        <span className={`ls ${r.qty >= 0 ? 'long' : 'short'}`}>{r.qty >= 0 ? 'L' : 'S'} {Math.abs(r.qty).toLocaleString()}</span>
-                        <small>{r.name}</small>
-                      </td>
-                      <td>{px(r.last)}</td>
-                      <td className={cls(r.chgPct)}>{pct(r.chgPct)}</td>
-                      <td className={cls(r.dayPnl)}>{(r.dayPnl >= 0 ? '+' : '') + usdShort(r.dayPnl)}</td>
-                      <td className="muted">{usdShort(r.mv)}</td>
-                    </tr>
-                  ))}
+                  {(() => {
+                    const posRow = (r) => (
+                      <tr key={r.sym}>
+                        <td className="sym">
+                          <b>{r.sym}</b>
+                          <span className={`ls ${r.qty >= 0 ? 'long' : 'short'}`}>{r.qty >= 0 ? 'L' : 'S'} {Math.abs(r.qty).toLocaleString()}</span>
+                          <small>{r.name}</small>
+                        </td>
+                        <td>{px(r.last)}</td>
+                        <td className={cls(r.chgPct)}>{pct(r.chgPct)}</td>
+                        <td className={cls(r.dayPnl)}>{(r.dayPnl >= 0 ? '+' : '') + usdShort(r.dayPnl)}</td>
+                        <td className="muted">{usdShort(r.mv)}</td>
+                      </tr>
+                    )
+                    const longs = rows.filter((r) => r.qty >= 0).sort((a, b) => b.dayPnl - a.dayPnl)
+                    const shorts = rows.filter((r) => r.qty < 0).sort((a, b) => b.dayPnl - a.dayPnl)
+                    const sum = (list, k) => list.reduce((s, r) => s + r[k], 0)
+                    const sub = (label, list) => (
+                      <tr className="subtotal" key={label}>
+                        <td colSpan={3}>{label}</td>
+                        <td className={cls(sum(list, 'dayPnl'))}>{(sum(list, 'dayPnl') >= 0 ? '+' : '') + usdShort(sum(list, 'dayPnl'))}</td>
+                        <td>{usdShort(sum(list, 'mv'))}</td>
+                      </tr>
+                    )
+                    return (<>
+                      <tr className="grp"><td colSpan={5}>LONG · {longs.length}</td></tr>
+                      {longs.map(posRow)}
+                      {sub('GROSS LONG', longs)}
+                      <tr className="grp"><td colSpan={5}>SHORT · {shorts.length}</td></tr>
+                      {shorts.map(posRow)}
+                      {sub('GROSS SHORT', shorts)}
+                      {sub('NET', rows)}
+                    </>)
+                  })()}
                 </tbody>
               </table>
             </div>

@@ -355,6 +355,26 @@ td.sym small { display: block; color: var(--dim); font-size: 9.5px; letter-spaci
 .neg { color: var(--down); }
 .muted { color: var(--dim); }
 
+/* book grouping rails */
+table.book tr.grp td {
+  text-align: left;
+  color: var(--amber-dim);
+  font-size: 9.5px;
+  letter-spacing: 2px;
+  background: var(--panel-2);
+  padding: 5px 12px;
+}
+table.book tr.subtotal td {
+  border-top: 1px solid var(--line-bright);
+  font-weight: 700;
+  color: var(--dim);
+}
+table.book tr.subtotal td:first-child {
+  text-align: left;
+  letter-spacing: 1.5px;
+  font-size: 10px;
+}
+
 
 /* ---------- NEWS / TAPE ---------- */
 .news-list { display: flex; flex-direction: column; }
