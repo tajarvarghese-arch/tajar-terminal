@@ -89,6 +89,13 @@ test('reasons union dedupes case-insensitively', () => {
   assert.ok(m.reasons.includes('clarity') && m.reasons.includes('health'))
 })
 
+test('focusDate travels with the newer blob, falls back to the other', () => {
+  const m = mergeState({ focus: 'x', focusDate: '2026-07-22' }, { focus: 'y' }, true, 1785000000000)
+  assert.equal(m.focusDate, '2026-07-22')
+  const m2 = mergeState({}, { focus: 'y', focusDate: '2026-07-23' }, true, 1785000000000)
+  assert.equal(m2.focusDate, '2026-07-23')
+})
+
 test('normalizers tolerate garbage', () => {
   const m = mergeState({ todos: 'nope', streaks: 42, logEntries: null }, {}, true, NOW)
   assert.deepEqual(m.todos, [])

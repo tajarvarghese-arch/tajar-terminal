@@ -131,6 +131,7 @@ export function mergeState(remote = {}, local = {}, remoteNewer = false, now = D
   return {
     soberStart: scalars.soberStart || fallback.soberStart || null,
     focus: typeof scalars.focus === 'string' ? scalars.focus : (fallback.focus || ''),
+    focusDate: scalars.focusDate || fallback.focusDate || null,
     todos: mergeTodos(remote.todos, local.todos, now),
     horizon: mergeHorizon(remote.horizon, local.horizon, now),
     streaks: mergeStreaks(remote.streaks, local.streaks, now),

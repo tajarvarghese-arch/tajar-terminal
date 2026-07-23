@@ -64,9 +64,11 @@ updates the checkboxes before ending.
       extend before 2028): named holiday labels, 13:00 early closes,
       5 test cases. Design rider: weekend rows in the week grid render
       dimmed for glanceable workday/weekend separation.
-- [ ] Focus-per-day: archive the focus line at day rollover into the
-      captain's-log entry for that day (prefix "FOCUS: ") instead of
-      letting yesterday's focus linger as today's.
+- [x] Focus-per-day: focus carries a focusDate (synced scalar); at
+      rollover it archives as "FOCUS: …" into that day's log entry —
+      only when the user didn't write one — then clears. Design rider:
+      ▸ NEXT chip marks the first upcoming event in today's agenda
+      (suppressed while something is ● NOW).
 - [ ] Vitals trends view — ONLY once ≥45 days of health data exist in
       the store (check first; if not yet, skip without consuming the
       iteration): 12-week weekly-average bars, weekday-vs-weekend

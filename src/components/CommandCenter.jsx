@@ -46,6 +46,7 @@ const K = {
   log: 'tajar-captains-log',
   syncKey: 'tajar-sync-key',
   updated: 'tajar-updated-at',
+  focusDate: 'tajar-focus-date',
 }
 
 const DEFAULT_SOBER = '2025-10-09'
@@ -331,6 +332,7 @@ export default function CommandCenter() {
   const [soberStart, setSoberStart] = useState(() => loadStr(K.sober, DEFAULT_SOBER))
   const [editSober, setEditSober] = useState(false)
   const [focus, setFocus] = useState(() => loadStr(K.focus, ''))
+  const [focusDate, setFocusDate] = useState(() => loadStr(K.focusDate, ''))
   const [editFocus, setEditFocus] = useState(false)
   const [focusDraft, setFocusDraft] = useState('')
   const [todos, setTodos] = useState(() => normTodos(load(K.todos, seedTodos)))
@@ -427,6 +429,7 @@ export default function CommandCenter() {
   /* persistence */
   useEffect(() => { try { localStorage.setItem(K.sober, JSON.stringify(soberStart)) } catch {} }, [soberStart])
   useEffect(() => { try { localStorage.setItem(K.focus, JSON.stringify(focus)) } catch {} }, [focus])
+  useEffect(() => { try { localStorage.setItem(K.focusDate, JSON.stringify(focusDate)) } catch {} }, [focusDate])
   useEffect(() => { try { localStorage.setItem(K.todos, JSON.stringify(todos)) } catch {} }, [todos])
   useEffect(() => { try { localStorage.setItem(K.horizon, JSON.stringify(horizon)) } catch {} }, [horizon])
   useEffect(() => { try { localStorage.setItem(K.reasons, JSON.stringify(reasons)) } catch {} }, [reasons])
@@ -454,7 +457,7 @@ export default function CommandCenter() {
      localStorage stays the offline cache; the server copy survives
      domain changes, re-installs, and new devices. Last write wins. */
   const snapshot = () => ({
-    soberStart, focus, todos, horizon, reasons, streaks, logEntries,
+    soberStart, focus, focusDate, todos, horizon, reasons, streaks, logEntries,
   })
   const snapshotRef = useRef(snapshot)
   snapshotRef.current = snapshot
@@ -482,6 +485,7 @@ export default function CommandCenter() {
         setTimeout(() => { applyingRef.current = false }, 100)
         if (merged.soberStart) setSoberStart(merged.soberStart)
         setFocus(merged.focus)
+        if (merged.focusDate) setFocusDate(merged.focusDate)
         setTodos(merged.todos)
         setHorizon(merged.horizon)
         setReasons(merged.reasons)
@@ -734,10 +738,25 @@ export default function CommandCenter() {
   const nowHM = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: false,
   }).format(now)
+  const isoOf = (d) => new Intl.DateTimeFormat('en-CA').format(d)
+  const todayISO = isoOf(now)
 
   /* ---------- actions ---------- */
   const openFocusEdit = () => { setFocusDraft(focus); setEditFocus(true) }
-  const saveFocus = () => { setFocus(focusDraft.trim()); setEditFocus(false) }
+  const saveFocus = () => { setFocus(focusDraft.trim()); setFocusDate(todayISO); setEditFocus(false) }
+
+  /* focus expires with its day: archive yesterday's line into that day's
+     log entry (never overwriting one the user wrote), then clear. */
+  useEffect(() => {
+    if (!focus) { if (focusDate !== todayISO) setFocusDate(todayISO); return }
+    if (!focusDate) { setFocusDate(todayISO); return } // legacy: adopt, don't archive
+    if (focusDate === todayISO) return
+    setLogEntries((es) =>
+      es.some((e) => e.d === focusDate) ? es : [{ d: focusDate, t: `FOCUS: ${focus}` }, ...es]
+    )
+    setFocus('')
+    setFocusDate(todayISO)
+  }, [todayISO, focus, focusDate]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const addTodo = () => {
     const text = todoDraft.trim()
@@ -764,10 +783,6 @@ export default function CommandCenter() {
     setReasonDraft('')
   }
   const delReason = (i) => setReasons((r) => r.filter((_, idx) => idx !== i))
-
-  /* streaks */
-  const isoOf = (d) => new Intl.DateTimeFormat('en-CA').format(d)
-  const todayISO = isoOf(now)
 
   /* calendar freshness — live feed first, date-stamped seeds as fallback,
      and never present a stale sync as current data */
@@ -1059,19 +1074,24 @@ export default function CommandCenter() {
           })()}
 
           {(() => {
-            const renderRows = (list, fam) => list.map((e, i) => {
-              const active = nowHM >= e.start && nowHM < e.end
-              return (
-                <div className={`agenda-row ${fam ? 'fam' : ''}`} key={i}>
-                  <div className="agenda-time">{e.start}<small>{e.end}</small></div>
-                  <div className="agenda-body">
-                    <h3>{e.title}</h3>
-                    {e.note && <p>{e.note}</p>}
-                    {active && <span className="now">&#9679; NOW</span>}
+            const renderRows = (list, fam) => {
+              const anyActive = list.some((e) => nowHM >= e.start && nowHM < e.end)
+              const nextIdx = anyActive ? -1 : list.findIndex((e) => e.start > nowHM)
+              return list.map((e, i) => {
+                const active = nowHM >= e.start && nowHM < e.end
+                return (
+                  <div className={`agenda-row ${fam ? 'fam' : ''}`} key={i}>
+                    <div className="agenda-time">{e.start}<small>{e.end}</small></div>
+                    <div className="agenda-body">
+                      <h3>{e.title}</h3>
+                      {e.note && <p>{e.note}</p>}
+                      {active && <span className="now">&#9679; NOW</span>}
+                      {i === nextIdx && <span className="next">&#9656; NEXT</span>}
+                    </div>
                   </div>
-                </div>
-              )
-            })
+                )
+              })
+            }
             if (!calOK) return (
               <div className="agenda">
                 <div className="agenda-empty">

@@ -383,6 +383,11 @@ td.sym small { display: block; color: var(--dim); font-size: 9.5px; letter-spaci
   color: var(--up); border: 1px solid #1c5c39;
   font-size: 8.5px; letter-spacing: 1px; padding: 1px 5px;
 }
+.agenda-body .next {
+  display: inline-block; margin-top: 5px;
+  color: var(--amber); border: 1px solid var(--amber-dim);
+  font-size: 8.5px; letter-spacing: 1px; padding: 1px 5px;
+}
 .agenda-empty { padding: 18px 12px; color: var(--dim); font-size: 12px; }
 
 /* ---------- TODO ---------- */
