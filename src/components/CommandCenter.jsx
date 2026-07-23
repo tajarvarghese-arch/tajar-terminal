@@ -1844,20 +1844,27 @@ export default function CommandCenter() {
                   </span>
                 ))}
               </div>
-              {/* whole-book heat signature — one block per position,
-                  intensity by move size; tap opens the book */}
+              {/* whole-book heat signature — width = position weight,
+                  color intensity = move size; tap opens the book */}
               <div className="heat" role="button" tabIndex={0} aria-label="Book heat map — open positions"
                 onClick={() => setMktOpen(true)} onKeyDown={keyActivate(() => setMktOpen(true))}>
                 {(() => {
                   const maxAbs = Math.max(0.01, ...rows.map((r) => Math.abs(r.chgPct)))
-                  return rows.map((r) => {
-                    const a = 0.18 + 0.72 * (Math.abs(r.chgPct) / maxAbs)
-                    const rgb = r.chgPct >= 0 ? '61, 220, 132' : '255, 69, 58'
-                    return (
-                      <i key={r.sym} title={`${r.sym} ${pct(r.chgPct)}`}
-                        style={{ background: `rgba(${rgb}, ${a.toFixed(2)})` }} />
-                    )
-                  })
+                  const gross = Math.max(1, rows.reduce((s, r) => s + Math.abs(r.mv), 0))
+                  return [...rows]
+                    .sort((a, b) => Math.abs(b.mv) - Math.abs(a.mv))
+                    .map((r) => {
+                      const weight = Math.abs(r.mv) / gross
+                      const a = 0.18 + 0.72 * (Math.abs(r.chgPct) / maxAbs)
+                      const rgb = r.chgPct >= 0 ? '61, 220, 132' : '255, 69, 58'
+                      return (
+                        <i key={r.sym}
+                          title={`${r.sym} ${pct(r.chgPct)} · ${usdShort(Math.abs(r.mv))} (${(weight * 100).toFixed(1)}% of gross)`}
+                          style={{ flexGrow: Math.max(1, Math.round(weight * 1000)), background: `rgba(${rgb}, ${a.toFixed(2)})` }}>
+                          {weight >= 0.05 && <span>{r.sym}</span>}
+                        </i>
+                      )
+                    })
                 })()}
               </div>
             </div>

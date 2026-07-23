@@ -1142,13 +1142,28 @@ table.book tr.subtotal td:first-child {
 .mkt-strip .movers .mv .sp { display: inline-block; vertical-align: -3px; margin-left: 6px; }
 .mkt-strip .heat {
   flex-basis: 100%;
-  display: grid;
-  grid-template-columns: repeat(16, 1fr);
+  display: flex;
   gap: 2px;
   padding: 0 12px 9px;
   cursor: pointer;
 }
-.mkt-strip .heat i { height: 13px; display: block; }
+.mkt-strip .heat i {
+  height: 20px;
+  flex-basis: 0;
+  min-width: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-style: normal;
+}
+.mkt-strip .heat i span {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--text);
+  white-space: nowrap;
+}
 .mkt-strip.closed .heat { filter: saturate(0.35); }
 /* closed session = frozen prices; dim them so the strip doesn't feign liveness */
 .mkt-strip.closed .cell b,
