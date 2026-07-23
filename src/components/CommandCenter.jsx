@@ -569,6 +569,47 @@ export default function CommandCenter() {
     }
   }, [])
 
+  /* pull-to-relink — a home-screen app has no reload button. Dragging
+     down from the very top re-pulls every feed (quotes, calendar,
+     health, weather, state) without reloading the page.
+     States: '' → 'pull' (dragging) → 'armed' (past threshold) →
+     'relink' (released, refreshing) → '' */
+  const [pullState, setPullState] = useState('')
+  const pullRef = useRef({ y0: -1, armed: false })
+  useEffect(() => {
+    const THRESHOLD = 72
+    const onStart = (e) => {
+      pullRef.current = window.scrollY <= 0
+        ? { y0: e.touches[0].clientY, armed: false }
+        : { y0: -1, armed: false }
+    }
+    const onMove = (e) => {
+      const p = pullRef.current
+      if (p.y0 < 0 || window.scrollY > 0) return
+      const dy = e.touches[0].clientY - p.y0
+      if (dy <= 0) { if (!p.armed) setPullState(''); return }
+      p.armed = dy > THRESHOLD
+      setPullState(p.armed ? 'armed' : 'pull')
+    }
+    const onEnd = () => {
+      const p = pullRef.current
+      pullRef.current = { y0: -1, armed: false }
+      if (!p.armed) { setPullState(''); return }
+      setPullState('relink')
+      lastWake.current = Date.now()
+      setRefreshTick((t) => t + 1)
+      setTimeout(() => setPullState(''), 1200)
+    }
+    window.addEventListener('touchstart', onStart, { passive: true })
+    window.addEventListener('touchmove', onMove, { passive: true })
+    window.addEventListener('touchend', onEnd, { passive: true })
+    return () => {
+      window.removeEventListener('touchstart', onStart)
+      window.removeEventListener('touchmove', onMove)
+      window.removeEventListener('touchend', onEnd)
+    }
+  }, [])
+
   /* wire tape scroll — rAF-driven so iOS can't drop the animated layer.
      Width is measured live each frame; wraps at the exact halfway point.
      A finger (or hover) holds the tape still for reading. */
@@ -1929,6 +1970,15 @@ export default function CommandCenter() {
           </button>
         ))}
       </nav>
+
+      {/* pull-to-relink indicator */}
+      {pullState && (
+        <div className={`relink ${pullState}`} aria-live="polite">
+          {pullState === 'pull' && '↓ PULL TO RELINK'}
+          {pullState === 'armed' && '↓ RELEASE TO RELINK'}
+          {pullState === 'relink' && '⟳ RELINKED · FEEDS REFRESHED'}
+        </div>
+      )}
     </div>
   )
 }

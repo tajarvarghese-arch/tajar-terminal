@@ -1219,3 +1219,28 @@ table.book tr.subtotal td:first-child {
   .term { padding-bottom: calc(46px + env(safe-area-inset-bottom)); }
   [data-sec] { scroll-margin-top: 78px; }
 }
+
+/* ---------- PULL-TO-RELINK ----------
+   drag down from the top of the page: the terminal re-pulls every
+   feed. Indicator hangs just below the masthead like a status line. */
+.relink {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 70;
+  background: #060504;
+  border: 1px solid var(--line-bright);
+  color: var(--dim);
+  font-size: 10px;
+  letter-spacing: 2px;
+  padding: 6px 14px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.relink.armed { color: var(--amber); border-color: var(--amber); }
+.relink.relink {
+  color: var(--green);
+  border-color: var(--green);
+  text-shadow: 0 0 8px rgba(51, 204, 102, 0.4);
+}

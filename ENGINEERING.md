@@ -161,6 +161,21 @@ updates the checkboxes before ending.
       green. (Tape pause verified by inspection — hidden test pane
       halts rAF entirely; motion itself verified in loop 8's fix.)
 
+### Phone loop (round 8, user-directed: "viewed mostly on the phone")
+- [x] M1 Compact masthead: past 140px of scroll the stacked mobile
+      masthead folds to brand + clock slivers (~100px reclaimed);
+      returns intact at the top. Direct-set scroll listener — an rAF
+      throttle deadlocks when a hidden page freezes frames mid-tick.
+- [x] M2 Function-key dock: fixed thumb-zone rail (phone only) — >_
+      opens the command line, F1–F5 jump to TODAY/WEEK/HABIT/LOG/BOOK
+      via data-sec anchors; an IntersectionObserver band lights the
+      active desk; scroll-margin clears the compact sliver exactly
+      (verified 78px landing); safe-area padded.
+- [x] M3 Pull-to-relink: drag down from scrollY 0 re-pulls every feed
+      without a reload (standalone apps have no reload button). Three
+      terminal-styled states: PULL → RELEASE → RELINKED · FEEDS
+      REFRESHED; 9 fetches confirmed on release; mid-page drags inert.
+
 ### Discovered (loop appends here; user triages into P0–P2)
 - [x] Captain's log capped at 10 entries with no way to read history
       (grows daily via focus archiving) → SHOW ALL/SHOW RECENT toggle;
