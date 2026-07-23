@@ -1081,43 +1081,38 @@ export default function CommandCenter() {
     }
   }, [vitals, last28])
 
-  /* vitals trends — 12 weekly averages + weekday/weekend split + best day */
-  const trends = useMemo(() => {
+  /* vitals heat calendar — 12 week-columns × 7 weekday-rows per metric */
+  const heatCal = useMemo(() => {
     if (!vitals) return null
     const dayMs = 86400000
     const mid = todayMid(now).getTime()
-    const get = (t) => vitals[isoOf(new Date(t))]
+    const dow = (new Date(mid).getDay() + 6) % 7 // Monday = 0
+    const thisMonday = mid - dow * dayMs
     const weeks = []
+    let sSum = 0, sC = 0, eSum = 0, eC = 0, maxSteps = 1, maxEx = 1, bestSteps = 0, bestISO = null
     for (let w = 11; w >= 0; w--) {
-      const end = mid - w * 7 * dayMs
-      let s = 0, sc = 0, e = 0, ec = 0
-      for (let d = 6; d >= 0; d--) {
-        const v = get(end - d * dayMs)
-        if (typeof v?.steps === 'number') { s += v.steps; sc++ }
-        if (typeof v?.exercise === 'number') { e += v.exercise; ec++ }
+      const col = []
+      for (let d = 0; d < 7; d++) {
+        const t = thisMonday - w * 7 * dayMs + d * dayMs
+        const iso = isoOf(new Date(t))
+        const future = t > mid
+        const v = future ? undefined : vitals[iso]
+        const steps = typeof v?.steps === 'number' ? v.steps : null
+        const ex = typeof v?.exercise === 'number' ? v.exercise : null
+        if (steps != null) {
+          sSum += steps; sC++
+          if (steps > maxSteps) maxSteps = steps
+          if (steps > bestSteps) { bestSteps = steps; bestISO = iso }
+        }
+        if (ex != null) { eSum += ex; eC++; if (ex > maxEx) maxEx = ex }
+        col.push({ iso, steps, ex, future, today: iso === todayISO })
       }
-      weeks.push({
-        endISO: isoOf(new Date(end)),
-        steps: sc ? Math.round(s / sc) : null,
-        ex: ec ? Math.round(e / ec) : null,
-      })
-    }
-    let wdS = 0, wdC = 0, weS = 0, weC = 0, bestSteps = 0, bestISO = null
-    for (let d = 0; d < 90; d++) {
-      const t = mid - d * dayMs
-      const v = get(t)
-      if (typeof v?.steps !== 'number') continue
-      const dow = new Date(t).getDay()
-      if (dow === 0 || dow === 6) { weS += v.steps; weC++ } else { wdS += v.steps; wdC++ }
-      if (v.steps > bestSteps) { bestSteps = v.steps; bestISO = isoOf(new Date(t)) }
+      weeks.push(col)
     }
     return {
-      weeks,
-      maxWkSteps: Math.max(1, ...weeks.map((w) => w.steps || 0)),
-      maxWkEx: Math.max(1, ...weeks.map((w) => w.ex || 0)),
-      wkdayAvg: wdC ? Math.round(wdS / wdC) : null,
-      wkndAvg: weC ? Math.round(weS / weC) : null,
-      bestSteps, bestISO,
+      weeks, maxSteps, maxEx, bestSteps, bestISO,
+      avgSteps: sC ? Math.round(sSum / sC) : 0,
+      avgEx: eC ? Math.round(eSum / eC) : 0,
       logged: Object.keys(vitals).length,
     }
   }, [vitals, todayISO]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -1697,65 +1692,49 @@ export default function CommandCenter() {
                 <span className="chev"> &nbsp;{vitalsOpen ? '▲ HIDE' : '▼ CHARTS'}</span>
               </span>
             </div>
-            {vitalsOpen && (!vitalsHist || vitalsHist.logged === 0 ? (
+            {vitalsOpen && (!heatCal || heatCal.logged === 0 ? (
               <div className="agenda-empty">Awaiting health data — history appears after your first sync.</div>
             ) : (
-              <>
-                <div className="chart-block">
-                  <div className="chart-label">
-                    <u>STEPS · 28D</u>
-                    <span>AVG <b>{vitalsHist.avgSteps.toLocaleString()}</b> · BEST <b>{vitalsHist.maxSteps.toLocaleString()}</b></span>
-                  </div>
-                  <div className="bars steps">
-                    {vitalsHist.series.map((d) => (
-                      <i key={d.iso} title={`${d.iso} · ${d.steps != null ? d.steps.toLocaleString() + ' steps' : 'no data'}`}
-                        className={d.iso === todayISO ? 'cur' : ''}
-                        style={{ height: d.steps != null ? `${Math.max(6, (d.steps / vitalsHist.maxSteps) * 100)}%` : '2px' }} />
-                    ))}
-                  </div>
-                </div>
-                <div className="chart-block">
-                  <div className="chart-label">
-                    <u>EXERCISE · 28D</u>
-                    <span>AVG <b>{vitalsHist.avgEx}</b> · BEST <b>{vitalsHist.maxEx}</b></span>
-                  </div>
-                  <div className="bars ex">
-                    {vitalsHist.series.map((d) => (
-                      <i key={d.iso} title={`${d.iso} · ${d.exercise != null ? d.exercise + ' min' : 'no data'}`}
-                        className={d.iso === todayISO ? 'cur' : ''}
-                        style={{ height: d.exercise != null ? `${Math.max(6, (d.exercise / vitalsHist.maxEx) * 100)}%` : '2px' }} />
-                    ))}
-                  </div>
-                </div>
-                {trends && trends.logged >= 45 && (
-                  <>
-                    <div className="chart-block">
-                      <div className="chart-label">
-                        <u>STEPS · 12W AVG</u>
-                        <span>WKDAY <b>{trends.wkdayAvg?.toLocaleString() ?? '—'}</b> · WKND <b>{trends.wkndAvg?.toLocaleString() ?? '—'}</b></span>
-                      </div>
-                      <div className="bars steps w12">
-                        {trends.weeks.map((w) => (
-                          <i key={w.endISO} title={`wk ending ${w.endISO} · ${w.steps != null ? w.steps.toLocaleString() + ' avg steps/day' : 'no data'}`}
-                            style={{ height: w.steps != null ? `${Math.max(6, (w.steps / trends.maxWkSteps) * 100)}%` : '2px' }} />
-                        ))}
-                      </div>
+              (() => {
+                const DOW = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+                const grid = (metric, max, rgb) => (
+                  <div className="heatcal">
+                    <div className="dowrail" aria-hidden="true">
+                      {DOW.map((d, i) => <u key={i}>{d}</u>)}
                     </div>
-                    <div className="chart-block">
-                      <div className="chart-label">
-                        <u>EXERCISE · 12W AVG</u>
-                        <span>BEST DAY <b>{trends.bestSteps ? trends.bestSteps.toLocaleString() : '—'}</b>{trends.bestISO ? ` · ${fmtDate(trends.bestISO)}` : ''}</span>
-                      </div>
-                      <div className="bars ex w12">
-                        {trends.weeks.map((w) => (
-                          <i key={w.endISO} title={`wk ending ${w.endISO} · ${w.ex != null ? w.ex + ' avg min/day' : 'no data'}`}
-                            style={{ height: w.ex != null ? `${Math.max(6, (w.ex / trends.maxWkEx) * 100)}%` : '2px' }} />
-                        ))}
-                      </div>
+                    <div className="cells">
+                      {heatCal.weeks.map((col, wi) =>
+                        col.map((c) => {
+                          const v = c[metric]
+                          const a = v != null ? 0.14 + 0.76 * (v / max) : 0
+                          return (
+                            <i key={c.iso}
+                              className={`${c.today ? 'today' : ''} ${c.future ? 'future' : ''}`}
+                              title={`${fmtDateW(c.iso)} · ${v != null ? (metric === 'steps' ? v.toLocaleString() + ' steps' : v + ' min') : 'no data'}`}
+                              style={v != null ? { background: `rgba(${rgb}, ${a.toFixed(2)})` } : undefined} />
+                          )
+                        })
+                      )}
                     </div>
-                  </>
-                )}
-              </>
+                  </div>
+                )
+                return (<>
+                  <div className="chart-block">
+                    <div className="chart-label">
+                      <u>STEPS · 12W</u>
+                      <span>AVG <b>{heatCal.avgSteps.toLocaleString()}</b> · BEST <b>{heatCal.bestSteps.toLocaleString()}</b>{heatCal.bestISO ? ` · ${fmtDate(heatCal.bestISO)}` : ''}</span>
+                    </div>
+                    {grid('steps', heatCal.maxSteps, '255, 171, 0')}
+                  </div>
+                  <div className="chart-block">
+                    <div className="chart-label">
+                      <u>EXERCISE · 12W</u>
+                      <span>AVG <b>{heatCal.avgEx}</b> MIN/DAY</span>
+                    </div>
+                    {grid('ex', heatCal.maxEx, '61, 220, 132')}
+                  </div>
+                </>)
+              })()
             ))}
           </section>
         )}
