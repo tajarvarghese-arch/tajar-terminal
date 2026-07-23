@@ -210,33 +210,79 @@ function Spark({ data, w = 54, h = 15 }) {
 }
 
 /* 24h tide curve — cosine-interpolated between NOAA extremes, NOW dot */
-function TideCurve({ tides, now, w = 108, h = 20 }) {
+/* tide instrument — the 24h curve as the hero, with the next high and
+   low annotated on the curve itself (their old separate cells retired).
+   Width is measured so annotation text never stretches. */
+function TideHero({ tides, now }) {
+  const boxRef = useRef(null)
+  const [w, setW] = useState(0)
+  useEffect(() => {
+    const el = boxRef.current
+    if (!el) return
+    const measure = () => setW(el.clientWidth)
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  const h = 56
   const t0 = now.getTime() - 3 * 3600e3
   const t1 = t0 + 24 * 3600e3
-  const evs = tides.filter((t) => t.when.getTime() > t0 - 8 * 3600e3 && t.when.getTime() < t1 + 8 * 3600e3)
-  if (evs.length < 2) return null
-  const fts = evs.map((e) => e.ft)
-  const min = Math.min(...fts), max = Math.max(...fts), span = max - min || 1
-  const yOf = (ft) => 1 + (h - 2) * (1 - (ft - min) / span)
-  const ftAt = (tm) => {
-    let a = evs[0], b = evs[evs.length - 1]
-    for (let i = 0; i < evs.length - 1; i++) {
-      if (evs[i].when.getTime() <= tm && evs[i + 1].when.getTime() >= tm) { a = evs[i]; b = evs[i + 1]; break }
+  const body = useMemo(() => {
+    if (!w) return null
+    const evs = tides.filter((t) => t.when.getTime() > t0 - 8 * 3600e3 && t.when.getTime() < t1 + 8 * 3600e3)
+    if (evs.length < 2) return null
+    const fts = evs.map((e) => e.ft)
+    const min = Math.min(...fts), max = Math.max(...fts), span = max - min || 1
+    /* 13px head/foot bands reserved for the annotation text */
+    const yOf = (ft) => 14 + (h - 28) * (1 - (ft - min) / span)
+    const ftAt = (tm) => {
+      let a = evs[0], b = evs[evs.length - 1]
+      for (let i = 0; i < evs.length - 1; i++) {
+        if (evs[i].when.getTime() <= tm && evs[i + 1].when.getTime() >= tm) { a = evs[i]; b = evs[i + 1]; break }
+      }
+      const ta = a.when.getTime(), tb = b.when.getTime()
+      if (tm <= ta) return a.ft
+      if (tm >= tb) return b.ft
+      const u = (tm - ta) / (tb - ta)
+      return a.ft + (b.ft - a.ft) * (1 - Math.cos(Math.PI * u)) / 2
     }
-    const ta = a.when.getTime(), tb = b.when.getTime()
-    if (tm <= ta) return a.ft
-    if (tm >= tb) return b.ft
-    const u = (tm - ta) / (tb - ta)
-    return a.ft + (b.ft - a.ft) * (1 - Math.cos(Math.PI * u)) / 2
-  }
-  const pts = []
-  for (let x = 0; x <= w; x += 3) pts.push(`${x},${yOf(ftAt(t0 + (x / w) * (t1 - t0))).toFixed(1)}`)
-  const nowX = ((now.getTime() - t0) / (t1 - t0)) * w
+    const pts = []
+    for (let x = 0; x <= w; x += 3) pts.push(`${x},${yOf(ftAt(t0 + (x / w) * (t1 - t0))).toFixed(1)}`)
+    const hm = (d) => new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }).format(d)
+    const xOf = (tm) => Math.min(w - 46, Math.max(46, ((tm - t0) / (t1 - t0)) * w))
+    const mark = (ev) => ev && ev.when.getTime() < t1 ? {
+      x: xOf(ev.when.getTime()),
+      y: yOf(ev.ft),
+      label: `${ev.type === 'H' ? '▲' : '▼'}${hm(ev.when)}${ev.when.getDate() !== now.getDate() ? '+1' : ''} · ${ev.ft.toFixed(1)}FT`,
+    } : null
+    const upcoming = tides.filter((t) => t.when > now)
+    return {
+      pts: pts.join(' '),
+      nowX: ((now.getTime() - t0) / (t1 - t0)) * w,
+      nowY: yOf(ftAt(now.getTime())),
+      hi: mark(upcoming.find((t) => t.type === 'H')),
+      lo: mark(upcoming.find((t) => t.type === 'L')),
+    }
+  }, [w, tides, now, t0, t1])
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} style={{ width: w, height: h, display: 'block' }} aria-hidden="true">
-      <polyline points={pts.join(' ')} fill="none" stroke="#8a8272" strokeWidth="1.2" />
-      <circle cx={nowX.toFixed(1)} cy={yOf(ftAt(now.getTime())).toFixed(1)} r="2.2" fill="#ffab00" />
-    </svg>
+    <div ref={boxRef} className="tide-hero">
+      {body && (
+        <svg viewBox={`0 0 ${w} ${h}`} style={{ width: w, height: h, display: 'block' }} aria-hidden="true">
+          <polyline points={body.pts} fill="none" stroke="#8a8272" strokeWidth="1.2" />
+          {body.hi && (
+            <text x={body.hi.x} y="9" textAnchor="middle" fontSize="9" fill="#33cc66"
+              style={{ letterSpacing: '0.5px' }}>{body.hi.label}</text>
+          )}
+          {body.lo && (
+            <text x={body.lo.x} y={h - 3} textAnchor="middle" fontSize="9" fill="#ffab00"
+              style={{ letterSpacing: '0.5px' }}>{body.lo.label}</text>
+          )}
+          <circle cx={body.nowX.toFixed(1)} cy={body.nowY.toFixed(1)} r="2.6" fill="#ffab00" />
+        </svg>
+      )}
+      {!body && <b className="muted">AWAITING NOAA LINK —</b>}
+    </div>
   )
 }
 
@@ -860,18 +906,6 @@ export default function CommandCenter() {
     return () => { alive = false; clearInterval(id) }
   }, [refreshTick])
 
-  /* next high / low tide relative to now */
-  const nextTide = useMemo(() => {
-    const upcoming = tides.filter((t) => t.when > now)
-    const hm = (d) => new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }).format(d)
-    const h = upcoming.find((t) => t.type === 'H')
-    const l = upcoming.find((t) => t.type === 'L')
-    return {
-      high: h ? { at: hm(h.when), ft: h.ft.toFixed(1), tmrw: h.when.getDate() !== now.getDate() } : null,
-      low: l ? { at: hm(l.when), ft: l.ft.toFixed(1), tmrw: l.when.getDate() !== now.getDate() } : null,
-    }
-  }, [tides, now])
-
   /* weather — Open-Meteo direct from the browser, refreshed every 15 min */
   useEffect(() => {
     let alive = true
@@ -1457,35 +1491,33 @@ export default function CommandCenter() {
             )}
           </div>
 
-          {/* always rendered with placeholders — async data must not shift layout */}
+          {/* always rendered with placeholders — async data must not shift layout.
+              Option C: one condensed weather line, the tide curve as the hero
+              instrument (next H/L annotated on it), sun + moon on a shared rail. */}
           <div className="wx-strip">
-            <span><u>NOW</u><b>{wx ? `${wx.temp}°F` : '—'}</b></span>
-            <span><u>FEELS</u><b>{wx ? `${wx.feels}°F` : '—'}</b></span>
-            <span><u>HI / LO</u><b>{wx ? `${wx.hi}° / ${wx.lo}°` : '—'}</b></span>
-            <span><u>PRECIP</u><b>{wx ? `${wx.precip}%` : '—'}</b></span>
-            <span><u>WIND</u><b>{wx ? `${wx.wind} MPH` : '—'}</b></span>
-            <span><u>SUN</u><b>{wx ? `${wx.sunrise}–${wx.sunset}` : '—'}</b></span>
-            <span title={nextTide.high ? `Next high tide · Cos Cob Harbor · ${nextTide.high.ft} ft` : undefined}>
-              <u>HIGH TIDE</u>
-              <b className="tide-hi">{nextTide.high ? <>▲ {nextTide.high.at}{nextTide.high.tmrw ? '+1' : ''} <i>{nextTide.high.ft}FT</i></> : '—'}</b>
-            </span>
-            <span title={nextTide.low ? `Next low tide · Cos Cob Harbor · ${nextTide.low.ft} ft` : undefined}>
-              <u>LOW TIDE</u>
-              <b className="tide-lo">{nextTide.low ? <>▼ {nextTide.low.at}{nextTide.low.tmrw ? '+1' : ''} <i>{nextTide.low.ft}FT</i></> : '—'}</b>
-            </span>
-            <span className="tide-curve" title="Tide, next 24h · Cos Cob Harbor">
-              <u>TIDE 24H</u>
-              {tides.length >= 2 ? <TideCurve tides={tides} now={now} /> : <b className="muted">—</b>}
-            </span>
-            {(() => {
-              const m = moonPhase(now)
-              return (
-                <span title={`Moon · ${m.illum}% illuminated · day ${Math.round(m.age)} of ${Math.round(SYNODIC)}`}>
-                  <u>MOON</u>
-                  <b className="moon-b"><MoonIcon age={m.age} />{m.name} <i>{m.illum}%</i></b>
-                </span>
-              )
-            })()}
+            <div className="wx-line">
+              <b>{wx ? `${wx.temp}°F` : '—'}</b>
+              <u>FEELS</u> <b>{wx ? `${wx.feels}°` : '—'}</b>
+              <s>·</s> <b>{wx ? `${wx.hi}°/${wx.lo}°` : '—'}</b>
+              <u>RAIN</u> <b>{wx ? `${wx.precip}%` : '—'}</b>
+              <u>WIND</u> <b>{wx ? `${wx.wind} MPH` : '—'}</b>
+            </div>
+            <div className="wx-tide" title="Tide, next 24h · Cos Cob Harbor">
+              <u>TIDE 24H · COS COB HARBOR</u>
+              <TideHero tides={tides} now={now} />
+            </div>
+            <div className="wx-foot">
+              <span><u>SUN</u><b>{wx ? `${wx.sunrise}–${wx.sunset}` : '—'}</b></span>
+              {(() => {
+                const m = moonPhase(now)
+                return (
+                  <span title={`Moon · ${m.illum}% illuminated · day ${Math.round(m.age)} of ${Math.round(SYNODIC)}`}>
+                    <u>MOON</u>
+                    <b className="moon-b"><MoonIcon age={m.age} />{m.name} <i>{m.illum}%</i></b>
+                  </span>
+                )
+              })()}
+            </div>
           </div>
 
 
