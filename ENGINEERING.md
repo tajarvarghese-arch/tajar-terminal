@@ -80,9 +80,11 @@ updates the checkboxes before ending.
       tape (static, data intact) and every blink/pulse animation.
 
 ### P2 — polish
-- [ ] PWA manifest (name, icons from /public, display: standalone,
-      background/theme #0a0908) so the home-screen app gets correct
-      splash and icon metadata everywhere.
+- [x] PWA manifest: standalone display, #0a0908 theme/background,
+      icons = scalable icon.svg (vector redraw of the glyph) +
+      icon-192.png + apple-touch-icon. iOS ignores manifest icons
+      (uses apple-touch-icon) — manifest serves spec-compliance and
+      any future Android use.
 - [ ] Accessibility pass: aria-labels on all icon-only controls,
       prefers-reduced-motion disables the tape scroll and blinking
       cursors, focus outlines that fit the aesthetic.
