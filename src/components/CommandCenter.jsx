@@ -973,12 +973,19 @@ export default function CommandCenter() {
         <div className="bar-stats">
           <div className="bar-stat date"><u>DATE</u><b>{dateStr}</b></div>
           <div className="bar-stat now"><u>GREENWICH</u><b>{wx ? `${wx.temp}°F ${wx.label}` : '—'}</b></div>
-          {(wx?.days || []).slice(0, 5).map((day, i) => (
-            <div className="bar-stat fc" key={day.date} title={`${day.date} · ${wmoLabel(day.code)}`}>
-              <u>{i === 0 ? 'TODAY' : new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(parseMid(day.date)).toUpperCase()}</u>
-              <b><WxIcon code={day.code} size={13} />{day.hi}°<i>/{day.lo}°</i></b>
-            </div>
-          ))}
+          {(wx?.days?.length ? wx.days.slice(0, 5) : Array.from({ length: 5 }, () => null)).map((day, i) =>
+            day ? (
+              <div className="bar-stat fc" key={day.date} title={`${day.date} · ${wmoLabel(day.code)}`}>
+                <u>{i === 0 ? 'TODAY' : new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(parseMid(day.date)).toUpperCase()}</u>
+                <b><WxIcon code={day.code} size={13} />{day.hi}°<i>/{day.lo}°</i></b>
+              </div>
+            ) : (
+              <div className="bar-stat fc" key={`ph${i}`}>
+                <u>·</u>
+                <b className="muted">—</b>
+              </div>
+            )
+          )}
         </div>
         <div className="bar-clock">
           {(() => {
@@ -1059,7 +1066,7 @@ export default function CommandCenter() {
         </div>
       </div>
 
-      <div className="term-grid">
+      <main className="term-grid">
         {/* ---------- TODAY ---------- */}
         <section className="panel span-2">
           <div className="panel-head">
@@ -1089,32 +1096,37 @@ export default function CommandCenter() {
             )}
           </div>
 
-          {wx && (
-            <div className="wx-strip">
-              <span><u>NOW</u><b>{wx.temp}°F</b></span>
-              <span><u>FEELS</u><b>{wx.feels}°F</b></span>
-              <span><u>HI / LO</u><b>{wx.hi}° / {wx.lo}°</b></span>
-              <span><u>PRECIP</u><b>{wx.precip}%</b></span>
-              <span><u>WIND</u><b>{wx.wind} MPH</b></span>
-              <span><u>SUN</u><b>{wx.sunrise}–{wx.sunset}</b></span>
-              {nextTide.high && (
-                <span title={`Next high tide · Cos Cob Harbor · ${nextTide.high.ft} ft`}>
-                  <u>HIGH TIDE</u>
-                  <b className="tide-hi">▲ {nextTide.high.at}{nextTide.high.tmrw ? '+1' : ''} <i>{nextTide.high.ft}FT</i></b>
-                </span>
-              )}
-              {nextTide.low && (
-                <span title={`Next low tide · Cos Cob Harbor · ${nextTide.low.ft} ft`}>
-                  <u>LOW TIDE</u>
-                  <b className="tide-lo">▼ {nextTide.low.at}{nextTide.low.tmrw ? '+1' : ''} <i>{nextTide.low.ft}FT</i></b>
-                </span>
-              )}
-            </div>
-          )}
+          {/* always rendered with placeholders — async data must not shift layout */}
+          <div className="wx-strip">
+            <span><u>NOW</u><b>{wx ? `${wx.temp}°F` : '—'}</b></span>
+            <span><u>FEELS</u><b>{wx ? `${wx.feels}°F` : '—'}</b></span>
+            <span><u>HI / LO</u><b>{wx ? `${wx.hi}° / ${wx.lo}°` : '—'}</b></span>
+            <span><u>PRECIP</u><b>{wx ? `${wx.precip}%` : '—'}</b></span>
+            <span><u>WIND</u><b>{wx ? `${wx.wind} MPH` : '—'}</b></span>
+            <span><u>SUN</u><b>{wx ? `${wx.sunrise}–${wx.sunset}` : '—'}</b></span>
+            <span title={nextTide.high ? `Next high tide · Cos Cob Harbor · ${nextTide.high.ft} ft` : undefined}>
+              <u>HIGH TIDE</u>
+              <b className="tide-hi">{nextTide.high ? <>▲ {nextTide.high.at}{nextTide.high.tmrw ? '+1' : ''} <i>{nextTide.high.ft}FT</i></> : '—'}</b>
+            </span>
+            <span title={nextTide.low ? `Next low tide · Cos Cob Harbor · ${nextTide.low.ft} ft` : undefined}>
+              <u>LOW TIDE</u>
+              <b className="tide-lo">{nextTide.low ? <>▼ {nextTide.low.at}{nextTide.low.tmrw ? '+1' : ''} <i>{nextTide.low.ft}FT</i></> : '—'}</b>
+            </span>
+          </div>
 
 
           {(() => {
-            if (!vitals) return null
+            if (!vitals) {
+              /* reserve the row while health data loads (only when sync is on) */
+              if (!syncKey) return null
+              return (
+                <div className="wx-strip vitals-strip">
+                  <span><u>VITALS</u><b className="vit-src">HEALTH</b></span>
+                  <span><u>STEPS</u><b className="muted">—</b></span>
+                  <span><u>EXERCISE</u><b className="muted">—</b></span>
+                </div>
+              )
+            }
             const ydaISO = isoOf(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1))
             const t = vitals[todayISO]
             const y = vitals[ydaISO]
@@ -1559,7 +1571,7 @@ export default function CommandCenter() {
             </div>
           )}
         </section>
-      </div>
+      </main>
 
       {/* ---------- FOOTER ---------- */}
       <footer className="term-foot">

@@ -96,6 +96,17 @@ updates the checkboxes before ending.
       fallback, font display=swap already present, preconnects present.
       Run an actual Lighthouse audit from a browser when convenient.
 
+### P3 — added by the loop (round 3, user-approved batch)
+- [ ] Data export: DOWNLOAD ARCHIVE in the footer — full personal
+      snapshot (todos, horizon, streaks, log, reasons, vitals history)
+      as a dated JSON file. Ownership guarantee: the data is always
+      leavable.
+- [ ] Grounding quote bank: expand from 14 to ~30 curated lines
+      (stoic/recovery register, no saccharine), keeping day-of-year
+      rotation.
+- [ ] Streak depth: show best-ever run alongside the current one
+      (dim `BEST nD`) — habits only, never sobriety.
+
 ### Discovered (loop appends here; user triages into P0–P2)
 - [x] Captain's log capped at 10 entries with no way to read history
       (grows daily via focus archiving) → SHOW ALL/SHOW RECENT toggle;

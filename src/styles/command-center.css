@@ -12,7 +12,7 @@
   --amber: #ffab00;
   --amber-dim: #a8760a;
   --text: #ece3d0;
-  --dim: #7d7565;
+  --dim: #8a8272; /* AA-passing (≥4.9:1) on every panel surface */
   --dim-2: #55504780;
   --up: #3ddc84;
   --down: #ff453a;
@@ -161,6 +161,13 @@
 }
 .self-stat.yda b { color: var(--dim); }
 .sober-chip:hover, .sync-chip:hover { border-color: var(--amber-dim); color: var(--amber); }
+
+/* touch-target hygiene: on coarse pointers the row is the interface,
+   not the 11px backfill cells; ✕ controls get an enlarged hit area */
+@media (pointer: coarse) {
+  .streak-cells .cell { pointer-events: none; }
+}
+.todo-del, .streak-del, .hz-del, .rdel { padding: 8px; margin: -8px; }
 
 .bar-clock {
   padding: 10px 14px;
@@ -582,7 +589,7 @@ table.book tr.subtotal td:first-child {
   gap: 6px;
   background: none;
   border: 1px solid var(--line-bright);
-  padding: 3px 8px;
+  padding: 5px 9px;
   font: inherit;
   font-size: 11px;
   letter-spacing: 1px;
