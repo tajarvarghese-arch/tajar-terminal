@@ -44,11 +44,10 @@ updates the checkboxes before ending.
 ## Backlog (priority order)
 
 ### P0 — reliability
-- [ ] Move the test suites into the repo: create `test/` with the
-      sync-merge cases (10+, incl. the newer()-tie regression), the
-      calendar ICS cases (12), and the health-payload cases (6);
-      add `"test": "node --test test/"` to package.json. These
-      currently live only in a session scratchpad — they must survive.
+- [x] Move the test suites into the repo: `test/` with 23 cases across
+      sync-merge (incl. the newer()-tie regression), calendar ICS, and
+      health payloads; `npm test` runs `node --test "test/*.test.mjs"`
+      (bare `test/` breaks on Windows — treated as a module path).
 - [ ] React error boundary around the whole terminal: on render crash,
       show a minimal amber-on-black fallback with the error text and a
       RELOAD button instead of a white screen (two real crashes to date:
