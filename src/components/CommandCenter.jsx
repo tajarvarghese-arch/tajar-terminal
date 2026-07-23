@@ -325,6 +325,11 @@ function marketState(now) {
 }
 
 export default function CommandCenter() {
+  /* deliberate crash seam for verifying the error boundary:
+     localStorage.setItem('tajar-crash-test', '1') then reload */
+  if (typeof localStorage !== 'undefined' && localStorage.getItem('tajar-crash-test')) {
+    throw new Error('crash test — clear tajar-crash-test and reload')
+  }
   const [now, setNow] = useState(() => new Date())
 
   /* portfolio (demoted) */

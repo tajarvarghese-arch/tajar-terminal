@@ -1,5 +1,10 @@
 import CommandCenter from './components/CommandCenter'
+import TermBoundary from './components/TermBoundary'
 
 export default function App() {
-  return <CommandCenter />
+  return (
+    <TermBoundary>
+      <CommandCenter />
+    </TermBoundary>
+  )
 }

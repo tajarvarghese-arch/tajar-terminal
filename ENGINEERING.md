@@ -48,10 +48,10 @@ updates the checkboxes before ending.
       sync-merge (incl. the newer()-tie regression), calendar ICS, and
       health payloads; `npm test` runs `node --test "test/*.test.mjs"`
       (bare `test/` breaks on Windows — treated as a module path).
-- [ ] React error boundary around the whole terminal: on render crash,
-      show a minimal amber-on-black fallback with the error text and a
-      RELOAD button instead of a white screen (two real crashes to date:
-      Invalid-Date in week meta, loadStr JSON mismatch).
+- [x] React error boundary (TermBoundary): render crashes show an
+      amber-on-black TERMINAL FAULT screen with the error text and a
+      RELOAD button. Verifiable crash seam: set localStorage
+      `tajar-crash-test` and reload.
 - [ ] Version-aware wake reload: embed the build hash at build time
       (e.g. define __BUILD__), serve it in a tiny `/version.json`;
       on wake, if the served hash differs from the running one,
