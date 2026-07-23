@@ -535,6 +535,17 @@ export default function CommandCenter() {
       .catch(() => { /* dev server has no version.json */ })
   }
 
+  /* compact masthead — once scrolling, the stacked mobile masthead
+     collapses to a slim brand+clock sliver and returns at the top */
+  const [mastCompact, setMastCompact] = useState(false)
+  useEffect(() => {
+    /* direct set — React bails on equal booleans, and rAF throttling
+       deadlocks when the page is hidden (frames freeze mid-tick) */
+    const onScroll = () => setMastCompact(window.scrollY > 140)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
   /* wake refresh — iOS resumes the frozen page when the home-screen icon
      is tapped; bumping this tick makes every data effect re-pull
      immediately on wake (throttled to once per 15 s). */
@@ -1253,7 +1264,7 @@ export default function CommandCenter() {
         </div>
       )}
       {/* ---------- MASTHEAD ---------- */}
-      <header className="term-bar">
+      <header className={`term-bar ${mastCompact ? 'compact' : ''}`}>
         <div className="bar-brand">
           <span className={`glyph ${allHabitsDone ? 'alldone' : ''}`} role="button" tabIndex={0}
             aria-label="Open command line"

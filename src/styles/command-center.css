@@ -291,6 +291,11 @@
   .bar-stat.fc:last-child { border-right: 0; }
   .bar-clock { border-left: 0; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
   .bar-clock time { font-size: 13px; }
+
+  /* scrolled: masthead collapses to brand + clock sliver */
+  .term-bar.compact .bar-stats { display: none; }
+  .term-bar.compact .bar-brand { padding: 6px 14px; }
+  .term-bar.compact .bar-clock { padding: 5px 14px; }
 }
 
 /* ---------- MARQUEE TAPE ---------- */
