@@ -224,8 +224,14 @@
 }
 .tape-item b { color: var(--amber); letter-spacing: 1px; }
 .tape-item .px { color: var(--text); }
+.tape-item .age { color: var(--dim); font-size: 10px; }
 .tape-item .chg.up { color: var(--up); }
 .tape-item .chg.down { color: var(--down); }
+
+/* reduced motion: kill every blink and pulse; tape is stopped in JS */
+@media (prefers-reduced-motion: reduce) {
+  .bar-brand .glyph i, .cursor, .mkt .dot, .sync-chip .dot { animation: none; }
+}
 
 /* ---------- LAYOUT GRID ---------- */
 .term-grid {

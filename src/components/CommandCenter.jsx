@@ -405,6 +405,8 @@ export default function CommandCenter() {
   /* wire tape scroll — rAF-driven so iOS can't drop the animated layer.
      Width is measured live each frame; wraps at the exact halfway point. */
   useEffect(() => {
+    /* respect reduced-motion: a static tape still shows the data */
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
     let raf
     let offset = 0
     let last = performance.now()
@@ -1029,7 +1031,8 @@ export default function CommandCenter() {
               {wire.map((n, i) => (
                 <span className="tape-item" key={`w${i}-${rep}`}>
                   <b>{n.src}</b>
-                  <span className="px">{n.title}</span>
+                  <span className="px">{n.title.length > 90 ? n.title.slice(0, 89).trimEnd() + '…' : n.title}</span>
+                  {n.time && <span className="age">{n.time}</span>}
                 </span>
               ))}
               {wire.length === 0 && (

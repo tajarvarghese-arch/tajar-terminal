@@ -75,8 +75,9 @@ updates the checkboxes before ending.
       weekend split, best-day annotation; hidden below 45 days of data.
       Design rider: market strip dims its frozen prices whenever the
       session is closed (honesty cue, verified both color paths).
-- [ ] Tape polish: relative age on headlines (e.g. `· 2H`), cap any
-      single headline at ~90 chars with ellipsis.
+- [x] Tape polish: dim relative-age chip on headlines, 90-char cap
+      with ellipsis. Design rider: prefers-reduced-motion stops the
+      tape (static, data intact) and every blink/pulse animation.
 
 ### P2 — polish
 - [ ] PWA manifest (name, icons from /public, display: standalone,
