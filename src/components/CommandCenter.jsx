@@ -875,10 +875,12 @@ export default function CommandCenter() {
     setFocusDate(todayISO)
   }, [todayISO, focus, focusDate]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const pushTodo = (text) =>
+    setTodos((t) => [...t, { id: Date.now(), text, done: false, mt: Date.now() }])
   const addTodo = () => {
     const text = todoDraft.trim()
     if (!text) return
-    setTodos((t) => [...t, { id: Date.now(), text, done: false, mt: Date.now() }])
+    pushTodo(text)
     setTodoDraft('')
   }
   const toggleTodo = (id) => setTodos((t) => t.map((x) => (x.id === id ? { ...x, done: !x.done, mt: Date.now() } : x)))
@@ -1063,6 +1065,65 @@ export default function CommandCenter() {
 
   const openTodos = todos.filter((t) => !t.del && !t.done).length
 
+  /* ---------- command line ----------
+     press / anywhere (or tap the masthead glyph) and drive the desk */
+  const runCommand = (raw) => {
+    const parts = raw.trim().split(/\s+/)
+    const cmd = (parts.shift() || '').toLowerCase()
+    const arg = parts.join(' ').trim()
+    switch (cmd) {
+      case 'focus':
+        if (!arg) return '? FOCUS <text>'
+        setFocus(arg); setFocusDate(todayISO); return '✓ FOCUS SET'
+      case 'todo':
+        if (!arg) return '? TODO <text>'
+        pushTodo(arg); return '✓ TODO ADDED'
+      case 'goal': {
+        if (!arg) return '? GOAL <text> [jul 30 · 7/30 · in 10d · fri]'
+        const p = parseGoal(arg, now)
+        if (!p) return '? GOAL <text> [date]'
+        setHorizon((h) => [...h, { id: Date.now(), label: p.label, date: p.date, note: '', progress: null, mt: Date.now() }])
+        return p.date ? `✓ GOAL · T-${daysUntil(p.date, now)}D` : '✓ GOAL ADDED'
+      }
+      case 'log':
+        if (!arg) return '? LOG <one line about today>'
+        setLogEntries((es) => [{ d: todayISO, t: arg }, ...es.filter((e) => e.d !== todayISO)])
+        return '✓ LOGGED'
+      case 'why':
+        if (!arg) return '? WHY <a reason>'
+        setReasons((r) => [...r, arg]); return '✓ REASON ADDED'
+      case 'habit':
+        if (!arg) return '? HABIT <name>'
+        setStreaks((s) => ({ ...s, habits: [...s.habits, { id: `h${Date.now()}`, name: arg.toUpperCase(), mt: Date.now() }] }))
+        return '✓ HABIT ADDED'
+      case 'did': {
+        if (!arg) return '? DID <habit name>'
+        const habit = streaks.habits.find((h) => !h.del && h.name.toLowerCase().startsWith(arg.toLowerCase()))
+        if (!habit) return `? NO HABIT MATCHES "${arg.toUpperCase()}"`
+        toggleMark(habit.id, todayISO)
+        return `✓ ${habit.name} LOGGED`
+      }
+      case 'book':
+        setMktOpen((v) => !v); return '✓ BOOK TOGGLED'
+      case 'help':
+        return 'FOCUS · TODO · GOAL · LOG · DID · WHY · HABIT · BOOK'
+      default:
+        return '? UNKNOWN — TRY HELP'
+    }
+  }
+  const [cmdOpen, setCmdOpen] = useState(false)
+  const [cmdDraft, setCmdDraft] = useState('')
+  const [cmdMsg, setCmdMsg] = useState('')
+  const closeCmd = () => { setCmdOpen(false); setCmdDraft(''); setCmdMsg('') }
+  useEffect(() => {
+    const onKey = (e) => {
+      const typing = ['INPUT', 'TEXTAREA'].includes(e.target?.tagName)
+      if (e.key === '/' && !typing && !cmdOpen) { e.preventDefault(); setCmdOpen(true) }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [cmdOpen])
+
   /* keyboard activation for span-based ✕ controls (nested in row buttons,
      so they can't be <button>s themselves) */
   const keyActivate = (fn) => (e) => {
@@ -1072,10 +1133,35 @@ export default function CommandCenter() {
   return (
     <div className="term">
       {booting && <Boot done={endBoot} />}
+
+      {/* ---------- COMMAND LINE ---------- */}
+      {cmdOpen && (
+        <div className="cmdline">
+          <span className="prompt">&gt;</span>
+          <input
+            autoFocus value={cmdDraft} aria-label="Command line"
+            onChange={(e) => setCmdDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') closeCmd()
+              if (e.key === 'Enter' && cmdDraft.trim()) {
+                const msg = runCommand(cmdDraft)
+                setCmdMsg(msg)
+                setCmdDraft('')
+                if (msg.startsWith('✓')) setTimeout(closeCmd, 800)
+              }
+            }}
+            placeholder="COMMAND — TRY HELP"
+          />
+          {cmdMsg && <span className={`cmd-msg ${cmdMsg.startsWith('✓') ? 'ok' : ''}`}>{cmdMsg}</span>}
+          <span className="cmd-esc" onClick={closeCmd}>ESC</span>
+        </div>
+      )}
       {/* ---------- MASTHEAD ---------- */}
       <header className="term-bar">
         <div className="bar-brand">
-          <span className="glyph" aria-hidden="true">&gt;<i /></span>
+          <span className="glyph" role="button" tabIndex={0} aria-label="Open command line"
+            onClick={() => setCmdOpen(true)} onKeyDown={keyActivate(() => setCmdOpen(true))}
+            title="Command line (/)">&gt;<i /></span>
           <b>TAJAR&nbsp;TERMINAL</b>
           <span>PERSONAL DESK</span>
         </div>
