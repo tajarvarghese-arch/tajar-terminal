@@ -358,7 +358,7 @@ const seedWeek = [
 const seedStreaks = {
   habits: [
     { id: 'piano', name: 'PIANO' },
-    { id: 'golf', name: 'GOLF' },
+    { id: 'golf', name: 'GOLF/TENNIS' },
     { id: 'move', name: 'WORKOUT' },
     { id: 'meeting', name: 'MEETING' },
   ],
