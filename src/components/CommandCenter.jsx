@@ -1502,10 +1502,6 @@ export default function CommandCenter() {
               <u>RAIN</u> <b>{wx ? `${wx.precip}%` : '—'}</b>
               <u>WIND</u> <b>{wx ? `${wx.wind} MPH` : '—'}</b>
             </div>
-            <div className="wx-tide" title="Tide, next 24h · Cos Cob Harbor">
-              <u>TIDE 24H · COS COB HARBOR</u>
-              <TideHero tides={tides} now={now} />
-            </div>
             <div className="wx-foot">
               <span><u>SUN</u><b>{wx ? `${wx.sunrise}–${wx.sunset}` : '—'}</b></span>
               {(() => {
@@ -1592,12 +1588,89 @@ export default function CommandCenter() {
           </div>
         </section>
 
+        {/* ---------- MARKETS (collapsed strip) ---------- */}
+        <section className="panel span-2" ref={marketsRef} data-sec="book">
+          <div className="panel-head mkt-head" onClick={() => setMktOpen((v) => !v)}>
+            <h2><span className="fn">02</span>MARKETS</h2>
+            <span className="meta">
+              <span className={`mkt ${marketStatus.open ? 'open' : 'closed'}`}><i className="dot" />{marketStatus.label}</span>
+              {' '}· NETLIQ <b>{usdShort(mkt.netLiq)}</b> · <span className={cls(mkt.dayPnl)}>{pct(mkt.dayPct)}</span>
+              <span className="chev"> &nbsp;{mktOpen ? '▲ HIDE' : '▼ BOOK'}</span>
+            </span>
+          </div>
+          {!mktOpen ? (
+            <div className={`mkt-strip ${marketStatus.open ? '' : 'closed'}`}>
+              <div className="cell"><u>NET LIQ</u><b>{usdShort(mkt.netLiq)}</b></div>
+              <div className="cell"><u>DAY P&amp;L</u><b className={cls(mkt.dayPnl)}>{usdShort(mkt.dayPnl)}</b></div>
+              <div className="movers">
+                {mkt.movers.map((m) => (
+                  <span className="mv" key={m.sym}>
+                    <b>{m.sym}</b>{' '}
+                    <span className={cls(m.chgPct)}>
+                      {pct(m.chgPct)}
+                      {m.spark && <i className="sp"><Spark data={m.spark} /></i>}
+                    </span>
+                  </span>
+                ))}
+              </div>
+              {/* whole-book squarified treemap — area = position weight,
+                  color intensity = move size; tap opens the book */}
+              <BookHeatMap rows={rows} onOpen={() => setMktOpen(true)}
+                keyActivate={keyActivate} pctFn={pct} usdFn={usdShort} />
+            </div>
+          ) : (
+            <div className="pf-table">
+              <table className="book">
+                <thead>
+                  <tr><th>SYMBOL</th><th>LAST</th><th>CHG%</th><th>DAY P&amp;L</th><th>MKT VAL</th></tr>
+                </thead>
+                <tbody>
+                  {(() => {
+                    const posRow = (r) => (
+                      <tr key={r.sym}>
+                        <td className="sym">
+                          <b>{r.sym}</b>
+                          <span className={`ls ${r.qty >= 0 ? 'long' : 'short'}`}>{r.qty >= 0 ? 'L' : 'S'} {Math.abs(r.qty).toLocaleString()}</span>
+                          <small>{r.name}</small>
+                        </td>
+                        <td>{px(r.last)}</td>
+                        <td className={cls(r.chgPct)}>{pct(r.chgPct)}</td>
+                        <td className={cls(r.dayPnl)}>{(r.dayPnl >= 0 ? '+' : '') + usdShort(r.dayPnl)}</td>
+                        <td className="muted">{usdShort(r.mv)}</td>
+                      </tr>
+                    )
+                    const longs = rows.filter((r) => r.qty >= 0).sort((a, b) => b.dayPnl - a.dayPnl)
+                    const shorts = rows.filter((r) => r.qty < 0).sort((a, b) => b.dayPnl - a.dayPnl)
+                    const sum = (list, k) => list.reduce((s, r) => s + r[k], 0)
+                    const sub = (label, list) => (
+                      <tr className="subtotal" key={label}>
+                        <td colSpan={3}>{label}</td>
+                        <td className={cls(sum(list, 'dayPnl'))}>{(sum(list, 'dayPnl') >= 0 ? '+' : '') + usdShort(sum(list, 'dayPnl'))}</td>
+                        <td>{usdShort(sum(list, 'mv'))}</td>
+                      </tr>
+                    )
+                    return (<>
+                      <tr className="grp"><td colSpan={5}>LONG · {longs.length}</td></tr>
+                      {longs.map(posRow)}
+                      {sub('GROSS LONG', longs)}
+                      <tr className="grp"><td colSpan={5}>SHORT · {shorts.length}</td></tr>
+                      {shorts.map(posRow)}
+                      {sub('GROSS SHORT', shorts)}
+                      {sub('NET', rows)}
+                    </>)
+                  })()}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
         {/* ---------- WEEK AHEAD (personal | family side by side) ---------- */}
         {(() => {
           const weekPanel = (title, rows, fam, emptyText) => (
             <section className={`panel ${fam ? 'fam' : ''}`} data-sec="week">
               <div className="panel-head">
-                <h2><span className="fn">02</span>{title}</h2>
+                <h2><span className="fn">03</span>{title}</h2>
                 <span className="meta">{weekMeta}</span>
               </div>
               <div className="week-list">
@@ -1622,7 +1695,7 @@ export default function CommandCenter() {
           return (
             <section className="panel span-2" data-sec="week">
               <div className="panel-head">
-                <h2><span className="fn">02</span>WEEK AHEAD</h2>
+                <h2><span className="fn">03</span>WEEK AHEAD</h2>
                 <span className="meta">{weekMeta}</span>
               </div>
               <div className="week-grid-head">
@@ -1659,7 +1732,7 @@ export default function CommandCenter() {
         {/* ---------- HORIZON ---------- */}
         <section className="panel">
           <div className="panel-head">
-            <h2><span className="fn">03</span>HORIZON · NEXT WEEKS</h2>
+            <h2><span className="fn">04</span>HORIZON · NEXT WEEKS</h2>
             <span className="meta">GOALS &amp; OBLIGATIONS</span>
           </div>
           <div className="hz-add">
@@ -1702,7 +1775,7 @@ export default function CommandCenter() {
         {/* ---------- STREAKS ---------- */}
         <section className="panel" data-sec="habit">
           <div className="panel-head">
-            <h2><span className="fn">04</span>STREAKS · 28D</h2>
+            <h2><span className="fn">05</span>STREAKS · 28D</h2>
             <span className="meta">TAP A ROW = DONE TODAY</span>
           </div>
           <div className="streak-list">
@@ -1744,7 +1817,7 @@ export default function CommandCenter() {
         {/* ---------- CAPTAIN'S LOG ---------- */}
         <section className="panel" data-sec="log">
           <div className="panel-head">
-            <h2><span className="fn">05</span>CAPTAIN&rsquo;S LOG</h2>
+            <h2><span className="fn">06</span>CAPTAIN&rsquo;S LOG</h2>
             <span className="meta">{logEntries.length} ENTRIES</span>
           </div>
           <div className="todo-add">
@@ -1779,7 +1852,7 @@ export default function CommandCenter() {
         {syncKey && (
           <section className="panel health">
             <div className="panel-head vit-head" onClick={() => setVitalsOpen((v) => !v)}>
-              <h2><span className="fn">06</span>VITALS</h2>
+              <h2><span className="fn">07</span>VITALS</h2>
               <span className="meta">
                 {(() => {
                   if (!vitals) return 'AWAITING SYNC'
@@ -1880,81 +1953,15 @@ export default function CommandCenter() {
           </div>
         </section>
 
-        {/* ---------- MARKETS (collapsed strip) ---------- */}
-        <section className="panel span-2" ref={marketsRef} data-sec="book">
-          <div className="panel-head mkt-head" onClick={() => setMktOpen((v) => !v)}>
-            <h2><span className="fn">09</span>MARKETS</h2>
-            <span className="meta">
-              <span className={`mkt ${marketStatus.open ? 'open' : 'closed'}`}><i className="dot" />{marketStatus.label}</span>
-              {' '}· NETLIQ <b>{usdShort(mkt.netLiq)}</b> · <span className={cls(mkt.dayPnl)}>{pct(mkt.dayPct)}</span>
-              <span className="chev"> &nbsp;{mktOpen ? '▲ HIDE' : '▼ BOOK'}</span>
-            </span>
+        {/* ---------- TIDE (bottom of the sheet) ---------- */}
+        <section className="panel span-2">
+          <div className="panel-head">
+            <h2><span className="fn">09</span>TIDE · 24H</h2>
+            <span className="meta">COS COB HARBOR · NOAA {TIDE_STATION}</span>
           </div>
-          {!mktOpen ? (
-            <div className={`mkt-strip ${marketStatus.open ? '' : 'closed'}`}>
-              <div className="cell"><u>NET LIQ</u><b>{usdShort(mkt.netLiq)}</b></div>
-              <div className="cell"><u>DAY P&amp;L</u><b className={cls(mkt.dayPnl)}>{usdShort(mkt.dayPnl)}</b></div>
-              <div className="movers">
-                {mkt.movers.map((m) => (
-                  <span className="mv" key={m.sym}>
-                    <b>{m.sym}</b>{' '}
-                    <span className={cls(m.chgPct)}>
-                      {pct(m.chgPct)}
-                      {m.spark && <i className="sp"><Spark data={m.spark} /></i>}
-                    </span>
-                  </span>
-                ))}
-              </div>
-              {/* whole-book squarified treemap — area = position weight,
-                  color intensity = move size; tap opens the book */}
-              <BookHeatMap rows={rows} onOpen={() => setMktOpen(true)}
-                keyActivate={keyActivate} pctFn={pct} usdFn={usdShort} />
-            </div>
-          ) : (
-            <div className="pf-table">
-              <table className="book">
-                <thead>
-                  <tr><th>SYMBOL</th><th>LAST</th><th>CHG%</th><th>DAY P&amp;L</th><th>MKT VAL</th></tr>
-                </thead>
-                <tbody>
-                  {(() => {
-                    const posRow = (r) => (
-                      <tr key={r.sym}>
-                        <td className="sym">
-                          <b>{r.sym}</b>
-                          <span className={`ls ${r.qty >= 0 ? 'long' : 'short'}`}>{r.qty >= 0 ? 'L' : 'S'} {Math.abs(r.qty).toLocaleString()}</span>
-                          <small>{r.name}</small>
-                        </td>
-                        <td>{px(r.last)}</td>
-                        <td className={cls(r.chgPct)}>{pct(r.chgPct)}</td>
-                        <td className={cls(r.dayPnl)}>{(r.dayPnl >= 0 ? '+' : '') + usdShort(r.dayPnl)}</td>
-                        <td className="muted">{usdShort(r.mv)}</td>
-                      </tr>
-                    )
-                    const longs = rows.filter((r) => r.qty >= 0).sort((a, b) => b.dayPnl - a.dayPnl)
-                    const shorts = rows.filter((r) => r.qty < 0).sort((a, b) => b.dayPnl - a.dayPnl)
-                    const sum = (list, k) => list.reduce((s, r) => s + r[k], 0)
-                    const sub = (label, list) => (
-                      <tr className="subtotal" key={label}>
-                        <td colSpan={3}>{label}</td>
-                        <td className={cls(sum(list, 'dayPnl'))}>{(sum(list, 'dayPnl') >= 0 ? '+' : '') + usdShort(sum(list, 'dayPnl'))}</td>
-                        <td>{usdShort(sum(list, 'mv'))}</td>
-                      </tr>
-                    )
-                    return (<>
-                      <tr className="grp"><td colSpan={5}>LONG · {longs.length}</td></tr>
-                      {longs.map(posRow)}
-                      {sub('GROSS LONG', longs)}
-                      <tr className="grp"><td colSpan={5}>SHORT · {shorts.length}</td></tr>
-                      {shorts.map(posRow)}
-                      {sub('GROSS SHORT', shorts)}
-                      {sub('NET', rows)}
-                    </>)
-                  })()}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <div className="tide-panel" title="Tide, next 24h · Cos Cob Harbor">
+            <TideHero tides={tides} now={now} />
+          </div>
         </section>
       </main>
 

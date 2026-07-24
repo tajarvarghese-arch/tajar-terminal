@@ -765,11 +765,6 @@ table.book tr.subtotal td:first-child {
 }
 .wx-line u { margin-left: 6px; }
 .wx-line s { text-decoration: none; color: var(--dim); margin-left: 6px; }
-.wx-tide {
-  padding: 6px 12px 3px;
-  border-bottom: 1px solid var(--line);
-}
-.wx-tide > u { display: block; margin-bottom: 1px; }
 .tide-hero .muted { display: block; padding: 18px 0; }
 .wx-foot { display: grid; grid-template-columns: 1fr 1fr; }
 .wx-foot span {
@@ -1257,3 +1252,6 @@ table.book tr.subtotal td:first-child {
   border-color: var(--green);
   text-shadow: 0 0 8px rgba(51, 204, 102, 0.4);
 }
+
+/* bottom-of-sheet tide panel */
+.tide-panel { padding: 8px 12px 6px; }
