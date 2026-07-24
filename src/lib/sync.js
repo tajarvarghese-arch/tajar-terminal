@@ -139,3 +139,17 @@ export function mergeState(remote = {}, local = {}, remoteNewer = false, now = D
     logEntries: mergeLogs(remote.logEntries, local.logEntries),
   }
 }
+
+/* End-of-day sweep: todos checked off on a previous day get tombstoned
+   (del:1 with a fresh mt, so the removal syncs like any other delete).
+   Returns the same array reference when nothing qualifies, so callers
+   can hand it straight to a state setter without churning a push. */
+export function sweepDoneTodos(todos, dayStart, now = Date.now()) {
+  if (!Array.isArray(todos)) return todos
+  let changed = false
+  const out = todos.map((t) => {
+    if (t && t.done && !t.del && (t.mt || 0) < dayStart) { changed = true; return { ...t, del: 1, mt: now } }
+    return t
+  })
+  return changed ? out : todos
+}

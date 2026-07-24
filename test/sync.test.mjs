@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mergeState, mergeStreaks, mergeTodos, normStreaks } from '../src/lib/sync.js'
+import { mergeState, mergeStreaks, mergeTodos, normStreaks, sweepDoneTodos } from '../src/lib/sync.js'
 
 const NOW = 1785000000000
 const T0 = NOW - 86400000 // "yesterday"
@@ -101,4 +101,29 @@ test('normalizers tolerate garbage', () => {
   assert.deepEqual(m.todos, [])
   assert.deepEqual(m.streaks.habits, [])
   assert.deepEqual(m.logEntries, [])
+})
+
+test('sweepDoneTodos tombstones only todos completed before today', () => {
+  const dayStart = 1785000000000
+  const todos = [
+    { id: 1, text: 'old done', done: true, mt: dayStart - 5000 },
+    { id: 2, text: 'done today', done: true, mt: dayStart + 5000 },
+    { id: 3, text: 'still open', done: false, mt: dayStart - 5000 },
+    { id: 4, text: 'already gone', done: true, del: 1, mt: dayStart - 5000 },
+    { id: 5, text: 'legacy no mt', done: true },
+  ]
+  const out = sweepDoneTodos(todos, dayStart, dayStart + 9000)
+  assert.equal(out.find((t) => t.id === 1).del, 1)
+  assert.equal(out.find((t) => t.id === 1).mt, dayStart + 9000)
+  assert.equal(out.find((t) => t.id === 2).del, undefined)
+  assert.equal(out.find((t) => t.id === 3).del, undefined)
+  assert.equal(out.find((t) => t.id === 4).mt, dayStart - 5000)
+  assert.equal(out.find((t) => t.id === 5).del, 1)
+})
+
+test('sweepDoneTodos returns the same reference when nothing qualifies', () => {
+  const dayStart = 1785000000000
+  const todos = [{ id: 1, text: 'open', done: false, mt: 1 }]
+  assert.equal(sweepDoneTodos(todos, dayStart, dayStart), todos)
+  assert.equal(sweepDoneTodos('garbage', dayStart, dayStart), 'garbage')
 })

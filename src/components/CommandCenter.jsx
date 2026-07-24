@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { mergeState, normTodos, normHorizon, normStreaks } from '../lib/sync'
+import { mergeState, normTodos, normHorizon, normStreaks, sweepDoneTodos } from '../lib/sync'
 import { marketState } from '../lib/market'
 import { layoutTreemap } from '../lib/treemap'
 import '../styles/command-center.css'
@@ -1028,6 +1028,14 @@ export default function CommandCenter() {
     setFocus('')
     setFocusDate(todayISO)
   }, [todayISO, focus, focusDate]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* completed must-dos expire with their day: anything checked off
+     before today is tombstoned on the next wake, so the list opens
+     clean each morning (and the removal syncs like a manual delete) */
+  useEffect(() => {
+    const dayStart = new Date(`${todayISO}T00:00`).getTime()
+    setTodos((ts) => sweepDoneTodos(ts, dayStart))
+  }, [todayISO])
 
   const pushTodo = (text) =>
     setTodos((t) => [...t, { id: Date.now(), text, done: false, mt: Date.now() }])
