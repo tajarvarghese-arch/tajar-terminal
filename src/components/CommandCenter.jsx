@@ -16,22 +16,22 @@ import '../styles/command-center.css'
 /* ---------- PORTFOLIO SEED (demoted to a strip) ---------- */
 /* Positions pulled from the connected brokerage; live quotes via /api/quote. */
 const seedBook = [
-  { sym: 'AAPL', name: 'APPLE',            yh: 'AAPL', qty: -1500, avg: 160.7906,     last: 334.028015,    prevClose: 332.27 },
-  { sym: 'ASML', name: 'ASML HOLDING',     yh: 'ASML', qty: -440,  avg: 1564.64007,   last: 1580.719971,   prevClose: 1698.30 },
-  { sym: 'BSX', name: 'BOSTON SCIENTIFIC', yh: 'BSX', qty: 3416,   avg: 73.175,       last: 44.924999,     prevClose: 42.98 },
-  { sym: 'CAT', name: 'CATERPILLAR',       yh: 'CAT', qty: -240,   avg: 981.504457,   last: 784.580017,    prevClose: 818.57 },
-  { sym: 'COST', name: 'COSTCO',           yh: 'COST', qty: -510,  avg: 948.973608,   last: 919.395020,    prevClose: 904.77 },
-  { sym: 'FISV', name: 'FISERV',           yh: 'FISV', qty: 1543,  avg: 64.803733,    last: 50.810001,     prevClose: 51.58 },
-  { sym: 'GOOG', name: 'ALPHABET',         yh: 'GOOG', qty: -3000, avg: 346.462531,   last: 345.415009,    prevClose: 335.45 },
-  { sym: 'MDT', name: 'MEDTRONIC',         yh: 'MDT', qty: 13000,  avg: 76.661717,    last: 93.894997,     prevClose: 90.96 },
-  { sym: 'MRNA', name: 'MODERNA',          yh: 'MRNA', qty: 3400,  avg: 148.378929,   last: 146.309998,    prevClose: 143.97 },
-  { sym: 'NFLX', name: 'NETFLIX',          yh: 'NFLX', qty: -10000,avg: 73.222288,    last: 80.349998,     prevClose: 77.40 },
-  { sym: 'OKLO', name: 'OKLO',             yh: 'OKLO', qty: -600,  avg: 174.296667,   last: 36.360001,     prevClose: 36.22 },
-  { sym: 'SBUX', name: 'STARBUCKS',        yh: 'SBUX', qty: -1200, avg: 114.746808,   last: 99.084999,     prevClose: 98.74 },
-  { sym: 'SNDK', name: 'SANDISK',          yh: 'SNDK', qty: -120,  avg: 1603.034862,  last: 1561.780029,   prevClose: 1633.35 },
-  { sym: 'UNH', name: 'UNITEDHEALTH',      yh: 'UNH', qty: 15834,  avg: 294.204548,   last: 384.075012,    prevClose: 376.77 },
+  { sym: 'AAPL', name: 'APPLE',            yh: 'AAPL', qty: -1500, avg: 160.7906,     last: 340.000000,    prevClose: 339.75 },
+  { sym: 'ASML', name: 'ASML HOLDING',     yh: 'ASML', qty: -440,  avg: 1564.64007,   last: 1721.930054,   prevClose: 1747.90 },
+  { sym: 'BSX', name: 'BOSTON SCIENTIFIC', yh: 'BSX', qty: 3416,   avg: 73.175,       last: 45.000000,     prevClose: 44.92 },
+  { sym: 'CAT', name: 'CATERPILLAR',       yh: 'CAT', qty: -240,   avg: 981.504457,   last: 805.309387,    prevClose: 808.01 },
+  { sym: 'COST', name: 'COSTCO',           yh: 'COST', qty: -510,  avg: 948.973608,   last: 900.500000,    prevClose: 899.41 },
+  { sym: 'FISV', name: 'FISERV',           yh: 'FISV', qty: 1543,  avg: 64.803733,    last: 46.220001,     prevClose: 46.10 },
+  { sym: 'GOOG', name: 'ALPHABET',         yh: 'GOOG', qty: -3000, avg: 346.462531,   last: 348.720001,    prevClose: 347.41 },
+  { sym: 'MDT', name: 'MEDTRONIC',         yh: 'MDT', qty: 13000,  avg: 76.661717,    last: 91.199997,     prevClose: 90.77 },
+  { sym: 'MRNA', name: 'MODERNA',          yh: 'MRNA', qty: 3400,  avg: 148.378929,   last: 181.750000,    prevClose: 182.56 },
+  { sym: 'NFLX', name: 'NETFLIX',          yh: 'NFLX', qty: -10000,avg: 73.222288,    last: 72.330002,     prevClose: 72.16 },
+  { sym: 'OKLO', name: 'OKLO',             yh: 'OKLO', qty: -600,  avg: 174.296667,   last: 40.790001,     prevClose: 40.45 },
+  { sym: 'SBUX', name: 'STARBUCKS',        yh: 'SBUX', qty: -1200, avg: 114.746808,   last: 95.410004,     prevClose: 95.11 },
+  { sym: 'SNDK', name: 'SANDISK',          yh: 'SNDK', qty: -120,  avg: 1603.034862,  last: 1882.540039,   prevClose: 1887.04 },
+  { sym: 'UNH', name: 'UNITEDHEALTH',      yh: 'UNH', qty: 15834,  avg: 294.204548,   last: 373.000000,    prevClose: 372.95 },
 ]
-const netLiqSeed = 9143203.87
+const netLiqSeed = 9011445.91
 
 /* Thesis map — which positions belong to which bet. Anything unmapped
    falls into IDIO automatically, so new positions never break it.
@@ -400,40 +400,43 @@ function MoonIcon({ age, size = 13 }) {
 /* Schedule from the connected Google Calendar. SCHEDULE_FOR stamps the
    day it was synced for — past that date the panel says so instead of
    showing another day's events as today's. Agent refreshes both daily. */
-const SCHEDULE_FOR = '2026-09-14'
+const SCHEDULE_FOR = '2026-09-23'
 const seedSchedule = [
-  { start: '07:00', end: '08:00', title: 'Greenwich Central Men’s Meeting', note: 'TV host' },
-  { start: '08:30', end: '08:45', title: 'Lift A — Bench 165 + RDL 145' },
+  { start: '07:00', end: '08:00', title: 'GMG meeting' },
+  { start: '11:30', end: '12:30', title: 'Piyush/Tajar- Yaniv/Dan- Navsonix', note: 'Google Meet · Yaniv Bejerano' },
 ]
 
 /* Week ahead — each row carries its real date so stale days drop off. */
 const seedWeek = [
-  { iso: '2026-09-15', day: 'TUE', date: '15', items: [
+  { iso: '2026-09-24', day: 'THU', date: '24', items: [
+    { t: '08:30', s: 'Lift B — Pullups + Swings, easy' },
+    { t: '15:00', s: 'Susan field hockey · home vs GA' },
+  ]},
+  { iso: '2026-09-25', day: 'FRI', date: '25', items: [
+    { t: '08:30', s: 'Lift A — TEST DAY ⚑ Bench AMRAP @ 170' },
+    { t: '15:00', s: 'Susan field hockey' },
+  ]},
+  { iso: '2026-09-26', day: 'SAT', date: '26', items: [
+    { t: '11:00', s: 'MTG with Jamie', hot: true },
+  ]},
+  { iso: '2026-09-27', day: 'SUN', date: '27', items: [
+    { t: '11:00', s: 'Tennis with Jim' },
+    { t: '12:30', s: 'GHS science research pot luck · Tod’s Point' },
+  ]},
+  { iso: '2026-09-28', day: 'MON', date: '28', items: [
+    { t: '07:00', s: 'Greenwich Central Men’s Meeting' },
+    { t: '08:30', s: 'Lift A — Bench per Sep 25 test + RDL 152.5' },
+    { t: '09:00', s: 'Easy 5K run' },
+    { t: '14:30', s: 'Kevin Trexler + Matt Sirovich', hot: true },
+  ]},
+  { iso: '2026-09-29', day: 'TUE', date: '29', items: [
     { t: '08:30', s: 'Lift B — Pullups + Swings' },
     { t: '10:15', s: 'Piano Lesson' },
     { t: '15:00', s: 'Susan field hockey' },
-    { t: '16:00', s: 'Debora · Taj 4:00, Anna 5:00' },
-    { t: '18:00', s: 'Dinner for Tom', hot: true },
   ]},
-  { iso: '2026-09-16', day: 'WED', date: '16', items: [
+  { iso: '2026-09-30', day: 'WED', date: '30', items: [
     { t: '07:00', s: 'GMG meeting' },
-  ]},
-  { iso: '2026-09-17', day: 'THU', date: '17', items: [
-    { t: '08:30', s: 'Lift A — Bench 147.5 + RDL 120' },
-    { t: '15:00', s: 'Susan field hockey · away, Cos Cob' },
-    { t: '17:00', s: 'Neil piano lesson · online' },
-  ]},
-  { iso: '2026-09-18', day: 'FRI', date: '18', items: [
-    { t: '08:30', s: 'Lift B — Pullups + Swings' },
-    { t: '15:00', s: 'Susan field hockey' },
-  ]},
-  { iso: '2026-09-19', day: 'SAT', date: '19', items: [] },
-  { iso: '2026-09-20', day: 'SUN', date: '20', items: [
-    { t: '16:00', s: 'Installation · Canon Sam Owen, Mamaroneck', hot: true },
-  ]},
-  { iso: '2026-09-21', day: 'MON', date: '21', items: [
-    { t: '07:00', s: 'Greenwich Central Men’s Meeting' },
-    { t: '08:30', s: 'Lift B — Pullups + Swings' },
+    { t: '09:00', s: 'Run workout (A/B)' },
   ]},
 ]
 
