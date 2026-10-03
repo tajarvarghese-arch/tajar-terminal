@@ -400,45 +400,41 @@ function MoonIcon({ age, size = 13 }) {
 /* Schedule from the connected Google Calendar. SCHEDULE_FOR stamps the
    day it was synced for — past that date the panel says so instead of
    showing another day's events as today's. Agent refreshes both daily. */
-const SCHEDULE_FOR = '2026-09-24'
+const SCHEDULE_FOR = '2026-10-03'
 const seedSchedule = [
-  { start: '08:30', end: '08:45', title: 'Lift B — Pullups + Swings, easy', note: 'Half volume · day before test' },
-  { start: '15:00', end: '16:30', title: 'Susan field hockey — home vs GA' },
-  { start: '16:10', end: '17:10', title: 'Pick up Susan' },
+  { start: '09:00', end: '10:00', title: 'Long run — 4.5 mi', note: 'Target 10:45–11:15/mi' },
 ]
 
 /* Week ahead — each row carries its real date so stale days drop off. */
 const seedWeek = [
-  { iso: '2026-09-25', day: 'FRI', date: '25', items: [
-    { t: '08:30', s: 'Lift A — TEST DAY ⚑ Bench AMRAP @ 170' },
-    { t: '15:00', s: 'Susan field hockey' },
-  ]},
-  { iso: '2026-09-26', day: 'SAT', date: '26', items: [
-    { t: '11:00', s: 'MTG with Jamie', hot: true },
-  ]},
-  { iso: '2026-09-27', day: 'SUN', date: '27', items: [
-    { t: '11:00', s: 'Tennis with Jim' },
-    { t: '12:30', s: 'GHS science research pot luck · Tod’s Point' },
-  ]},
-  { iso: '2026-09-28', day: 'MON', date: '28', items: [
+  { iso: '2026-10-05', day: 'MON', date: '05', items: [
     { t: '07:00', s: 'Greenwich Central Men’s Meeting' },
-    { t: '08:30', s: 'Lift A — Bench per Sep 25 test + RDL 152.5' },
     { t: '09:00', s: 'Easy 5K run' },
-    { t: '14:30', s: 'Kevin Trexler + Matt Sirovich', hot: true },
-  ]},
-  { iso: '2026-09-29', day: 'TUE', date: '29', items: [
-    { t: '08:30', s: 'Lift B — Pullups + Swings' },
-    { t: '10:15', s: 'Piano Lesson' },
     { t: '15:00', s: 'Susan field hockey' },
   ]},
-  { iso: '2026-09-30', day: 'WED', date: '30', items: [
-    { t: '07:00', s: 'GMG meeting' },
-    { t: '09:00', s: 'Run workout (A/B)' },
+  { iso: '2026-10-06', day: 'TUE', date: '06', items: [
+    { t: '10:15', s: 'Piano Lesson' },
+    { t: '15:00', s: 'Susan field hockey · away at Sacred Heart' },
   ]},
-  { iso: '2026-10-01', day: 'THU', date: '01', items: [
-    { t: '08:30', s: 'Lift A — Bench per Sep 25 test + RDL 155' },
-    { t: '15:00', s: 'Susan field hockey · home vs CMS' },
+  { iso: '2026-10-07', day: 'WED', date: '07', items: [
+    { t: '07:00', s: 'GMG meeting' },
+    { t: '07:00', s: 'Qualification' },
+    { t: '09:00', s: 'Run workout (A/B)' },
+    { t: '10:15', s: 'Naomi haircut' },
+  ]},
+  { iso: '2026-10-08', day: 'THU', date: '08', items: [
+    { t: '08:15', s: 'Meeting with Jessica Yu', hot: true },
+    { t: '10:00', s: 'Meeting with Philippa', hot: true },
+    { t: '15:00', s: 'Susan field hockey' },
     { t: '16:00', s: 'Neil piano lesson' },
+  ]},
+  { iso: '2026-10-09', day: 'FRI', date: '09', items: [
+    { t: '09:00', s: 'Easy 5K run' },
+    { t: '15:00', s: 'Susan field hockey' },
+  ]},
+  { iso: '2026-10-10', day: 'SAT', date: '10', items: [
+    { t: '09:00', s: 'Long run' },
+    { t: '19:00', s: 'Lovina’s birthday celebration' },
   ]},
 ]
 
