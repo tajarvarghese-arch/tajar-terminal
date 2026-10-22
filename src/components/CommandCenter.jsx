@@ -16,22 +16,21 @@ import '../styles/command-center.css'
 /* ---------- PORTFOLIO SEED (demoted to a strip) ---------- */
 /* Positions pulled from the connected brokerage; live quotes via /api/quote. */
 const seedBook = [
-  { sym: 'AAPL', name: 'APPLE',            yh: 'AAPL', qty: -1500, avg: 160.7906,     last: 336.519989,    prevClose: 337.02 },
-  { sym: 'ASML', name: 'ASML HOLDING',     yh: 'ASML', qty: -440,  avg: 1564.64007,   last: 1709.060059,   prevClose: 1744.61 },
-  { sym: 'BSX', name: 'BOSTON SCIENTIFIC', yh: 'BSX', qty: 3416,   avg: 73.175,       last: 44.509998,     prevClose: 44.62 },
-  { sym: 'CAT', name: 'CATERPILLAR',       yh: 'CAT', qty: -240,   avg: 981.504457,   last: 803.000000,    prevClose: 812.02 },
-  { sym: 'COST', name: 'COSTCO',           yh: 'COST', qty: -510,  avg: 948.973608,   last: 907.000000,    prevClose: 904.70 },
-  { sym: 'FISV', name: 'FISERV',           yh: 'FISV', qty: 1543,  avg: 64.803733,    last: 45.990002,     prevClose: 45.95 },
-  { sym: 'GOOG', name: 'ALPHABET',         yh: 'GOOG', qty: -3000, avg: 346.462531,   last: 333.730011,    prevClose: 334.98 },
-  { sym: 'MDT', name: 'MEDTRONIC',         yh: 'MDT', qty: 13000,  avg: 76.661717,    last: 89.300003,     prevClose: 89.30 },
-  { sym: 'MRNA', name: 'MODERNA',          yh: 'MRNA', qty: 3400,  avg: 148.378929,   last: 177.500000,    prevClose: 182.11 },
-  { sym: 'NFLX', name: 'NETFLIX',          yh: 'NFLX', qty: -10000,avg: 73.222288,    last: 71.580002,     prevClose: 71.36 },
-  { sym: 'OKLO', name: 'OKLO',             yh: 'OKLO', qty: -600,  avg: 174.296667,   last: 38.240002,     prevClose: 38.82 },
-  { sym: 'SBUX', name: 'STARBUCKS',        yh: 'SBUX', qty: -1200, avg: 114.746808,   last: 94.099998,     prevClose: 94.14 },
-  { sym: 'SNDK', name: 'SANDISK',          yh: 'SNDK', qty: -120,  avg: 1603.034862,  last: 1768.989990,   prevClose: 1816.57 },
-  { sym: 'UNH', name: 'UNITEDHEALTH',      yh: 'UNH', qty: 15834,  avg: 294.204548,   last: 371.000000,    prevClose: 371.29 },
+  { sym: 'AAPL', name: 'APPLE',            yh: 'AAPL', qty: -1500, avg: 160.7906,     last: 344.441986,    prevClose: 343.99 },
+  { sym: 'ASML', name: 'ASML HOLDING',     yh: 'ASML', qty: -440,  avg: 1564.64007,   last: 1591.689941,   prevClose: 1676.69 },
+  { sym: 'BSX', name: 'BOSTON SCIENTIFIC', yh: 'BSX', qty: 3416,   avg: 73.175,       last: 45.584999,     prevClose: 44.51 },
+  { sym: 'CAT', name: 'CATERPILLAR',       yh: 'CAT', qty: -240,   avg: 981.504457,   last: 696.179993,    prevClose: 740.21 },
+  { sym: 'COST', name: 'COSTCO',           yh: 'COST', qty: -510,  avg: 948.973608,   last: 1010.289978,   prevClose: 998.31 },
+  { sym: 'FISV', name: 'FISERV',           yh: 'FISV', qty: 1543,  avg: 64.803733,    last: 50.099998,     prevClose: 48.21 },
+  { sym: 'GOOG', name: 'ALPHABET',         yh: 'GOOG', qty: -3000, avg: 346.462531,   last: 323.220001,    prevClose: 330.95 },
+  { sym: 'MDT', name: 'MEDTRONIC',         yh: 'MDT', qty: 13000,  avg: 76.661717,    last: 96.025002,     prevClose: 93.03 },
+  { sym: 'NFLX', name: 'NETFLIX',          yh: 'NFLX', qty: -10000,avg: 73.222288,    last: 66.769997,     prevClose: 65.04 },
+  { sym: 'OKLO', name: 'OKLO',             yh: 'OKLO', qty: -600,  avg: 174.296667,   last: 26.785000,     prevClose: 27.73 },
+  { sym: 'SBUX', name: 'STARBUCKS',        yh: 'SBUX', qty: -1200, avg: 114.746808,   last: 101.349899,    prevClose: 99.08 },
+  { sym: 'SNDK', name: 'SANDISK',          yh: 'SNDK', qty: -120,  avg: 1603.034862,  last: 1279.994995,   prevClose: 1378.22 },
+  { sym: 'UNH', name: 'UNITEDHEALTH',      yh: 'UNH', qty: 15834,  avg: 294.204548,   last: 425.260010,    prevClose: 417.00 },
 ]
-const netLiqSeed = 9013111.16
+const netLiqSeed = 10618896.29
 
 /* Thesis map — which positions belong to which bet. Anything unmapped
    falls into IDIO automatically, so new positions never break it.
