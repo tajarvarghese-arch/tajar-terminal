@@ -16,21 +16,22 @@ import '../styles/command-center.css'
 /* ---------- PORTFOLIO SEED (demoted to a strip) ---------- */
 /* Positions pulled from the connected brokerage; live quotes via /api/quote. */
 const seedBook = [
-  { sym: 'AAPL', name: 'APPLE',            yh: 'AAPL', qty: -1500, avg: 160.7906,     last: 344.441986,    prevClose: 343.99 },
-  { sym: 'ASML', name: 'ASML HOLDING',     yh: 'ASML', qty: -440,  avg: 1564.64007,   last: 1591.689941,   prevClose: 1676.69 },
-  { sym: 'BSX', name: 'BOSTON SCIENTIFIC', yh: 'BSX', qty: 3416,   avg: 73.175,       last: 45.584999,     prevClose: 44.51 },
-  { sym: 'CAT', name: 'CATERPILLAR',       yh: 'CAT', qty: -240,   avg: 981.504457,   last: 696.179993,    prevClose: 740.21 },
-  { sym: 'COST', name: 'COSTCO',           yh: 'COST', qty: -510,  avg: 948.973608,   last: 1010.289978,   prevClose: 998.31 },
-  { sym: 'FISV', name: 'FISERV',           yh: 'FISV', qty: 1543,  avg: 64.803733,    last: 50.099998,     prevClose: 48.21 },
-  { sym: 'GOOG', name: 'ALPHABET',         yh: 'GOOG', qty: -3000, avg: 346.462531,   last: 323.220001,    prevClose: 330.95 },
-  { sym: 'MDT', name: 'MEDTRONIC',         yh: 'MDT', qty: 13000,  avg: 76.661717,    last: 96.025002,     prevClose: 93.03 },
-  { sym: 'NFLX', name: 'NETFLIX',          yh: 'NFLX', qty: -10000,avg: 73.222288,    last: 66.769997,     prevClose: 65.04 },
-  { sym: 'OKLO', name: 'OKLO',             yh: 'OKLO', qty: -600,  avg: 174.296667,   last: 26.785000,     prevClose: 27.73 },
-  { sym: 'SBUX', name: 'STARBUCKS',        yh: 'SBUX', qty: -1200, avg: 114.746808,   last: 101.349899,    prevClose: 99.08 },
-  { sym: 'SNDK', name: 'SANDISK',          yh: 'SNDK', qty: -120,  avg: 1603.034862,  last: 1279.994995,   prevClose: 1378.22 },
-  { sym: 'UNH', name: 'UNITEDHEALTH',      yh: 'UNH', qty: 15834,  avg: 294.204548,   last: 425.260010,    prevClose: 417.00 },
+  { sym: 'AAPL', name: 'APPLE',            yh: 'AAPL', qty: -3500, avg: 268.702982,   last: 342.649994,    prevClose: 344.17 },
+  { sym: 'ASML', name: 'ASML HOLDING',     yh: 'ASML', qty: -440,  avg: 1564.640070,  last: 1427.089966,   prevClose: 1356.65 },
+  { sym: 'BSX', name: 'BOSTON SCIENTIFIC', yh: 'BSX', qty: 3416,   avg: 73.175,       last: 42.800301,     prevClose: 44.64 },
+  { sym: 'CAT', name: 'CATERPILLAR',       yh: 'CAT', qty: -240,   avg: 981.504457,   last: 559.309998,    prevClose: 553.64 },
+  { sym: 'COST', name: 'COSTCO',           yh: 'COST', qty: -510,  avg: 948.973608,   last: 1052.569946,   prevClose: 1065.59 },
+  { sym: 'DELL', name: 'DELL TECHNOLOGIES', yh: 'DELL', qty: -1560, avg: 457.880007,  last: 331.700012,    prevClose: 316.91 },
+  { sym: 'FISV', name: 'FISERV',           yh: 'FISV', qty: 1543,  avg: 64.803733,    last: 62.088799,     prevClose: 62.74 },
+  { sym: 'GOOG', name: 'ALPHABET',         yh: 'GOOG', qty: -4000, avg: 331.486672,   last: 284.429993,    prevClose: 281.74 },
+  { sym: 'MDT', name: 'MEDTRONIC',         yh: 'MDT', qty: 13000,  avg: 76.661717,    last: 101.800003,    prevClose: 104.84 },
+  { sym: 'NFLX', name: 'NETFLIX',          yh: 'NFLX', qty: -10000,avg: 73.222288,    last: 63.400002,     prevClose: 65.56 },
+  { sym: 'OKLO', name: 'OKLO',             yh: 'OKLO', qty: -600,  avg: 174.296667,   last: 23.650000,     prevClose: 19.20 },
+  { sym: 'SBUX', name: 'STARBUCKS',        yh: 'SBUX', qty: -1200, avg: 114.746808,   last: 105.400002,    prevClose: 106.16 },
+  { sym: 'SNDK', name: 'SANDISK',          yh: 'SNDK', qty: -120,  avg: 1603.034862,  last: 841.400024,    prevClose: 806.43 },
+  { sym: 'UNH', name: 'UNITEDHEALTH',      yh: 'UNH', qty: 15834,  avg: 294.204548,   last: 393.940002,    prevClose: 395.72 },
 ]
-const netLiqSeed = 10618896.29
+const netLiqSeed = 10259056.64
 
 /* Thesis map — which positions belong to which bet. Anything unmapped
    falls into IDIO automatically, so new positions never break it.
@@ -399,50 +400,38 @@ function MoonIcon({ age, size = 13 }) {
 /* Schedule from the connected Google Calendar. SCHEDULE_FOR stamps the
    day it was synced for — past that date the panel says so instead of
    showing another day's events as today's. Agent refreshes both daily. */
-const SCHEDULE_FOR = '2026-10-22'
-const seedSchedule = [
-  { start: '13:30', end: '14:30', title: 'Annual physical — Dr. Logiadis', note: 'Glenville Medical Concierge Care' },
-  { start: '15:00', end: '16:10', title: 'Pick up Susan at school', note: 'Acoustic concert drop-off 4:00 · Towne Parlor' },
-  { start: '16:00', end: '16:45', title: 'Neil piano lesson', note: 'Online' },
-]
+const SCHEDULE_FOR = '2026-11-08'
+const seedSchedule = []
 
 /* Week ahead — each row carries its real date so stale days drop off. */
 const seedWeek = [
-  { iso: '2026-10-23', day: 'FRI', date: '23', items: [
-    { t: '08:00', s: 'PM catch up · Vault Advisors', hot: true },
-    { t: '09:00', s: 'Easy 5K run' },
-    { t: '10:30', s: 'Discuss next steps · Kim IP Law', hot: true },
-    { t: '12:00', s: 'Tee time · Innis Arden' },
-    { t: '15:00', s: 'Susan field hockey' },
-  ]},
-  { iso: '2026-10-24', day: 'SAT', date: '24', items: [
-    { t: '09:00', s: 'Tombstone Cup' },
-    { t: '09:00', s: 'Long run' },
-    { t: '10:30', s: 'MRNA intismeran Ph3 data · ESMO' },
-  ]},
-  { iso: '2026-10-26', day: 'MON', date: '26', items: [
+  { iso: '2026-11-09', day: 'MON', date: '09', items: [
     { t: '07:00', s: 'Greenwich Central Men’s Meeting' },
     { t: '09:00', s: 'Easy 5K run' },
-    { t: '09:30', s: 'PM catch up · Vault Advisors', hot: true },
     { t: '14:00', s: 'Piano lesson' },
-    { t: '15:00', s: 'Kevin Trexler + Matt Sirovich', hot: true },
-    { t: '15:00', s: 'Susan field hockey final · Cos Cob park' },
     { t: '16:30', s: 'Neil piano lesson' },
   ]},
-  { iso: '2026-10-27', day: 'TUE', date: '27', items: [
-    { t: '13:00', s: 'Partnership update & refinancing outlook', hot: true },
-    { t: '15:00', s: 'Susan field hockey' },
+  { iso: '2026-11-10', day: 'TUE', date: '10', items: [
+    { t: '13:00', s: 'Meet with Tom Koletas', hot: true },
+    { t: '17:00', s: 'CRWV earnings call (short)' },
   ]},
-  { iso: '2026-10-28', day: 'WED', date: '28', items: [
+  { iso: '2026-11-11', day: 'WED', date: '11', items: [
     { t: '07:00', s: 'GMG meeting' },
-    { t: '08:00', s: 'BSX earnings call (long)' },
     { t: '09:00', s: 'Run workout (A/B)' },
-    { t: '16:30', s: 'GOOG earnings call (short)' },
+    { t: '10:00', s: 'Partnership update & refinancing outlook', hot: true },
   ]},
-  { iso: '2026-10-29', day: 'THU', date: '29', items: [
-    { t: '15:00', s: 'Susan field hockey party' },
-    { t: '16:15', s: 'SBUX earnings call (short)' },
-    { t: '16:30', s: 'SNDK earnings call (short)' },
+  { iso: '2026-11-12', day: 'THU', date: '12', items: [
+    { t: '08:00', s: 'NBIS earnings call (short)' },
+    { t: '16:00', s: 'Rehearsal w/ ensemble · Opera Center' },
+  ]},
+  { iso: '2026-11-13', day: 'FRI', date: '13', items: [
+    { t: '09:00', s: 'Easy 5K run' },
+    { t: '16:00', s: 'Dress rehearsal · Christ & St Stephen’s' },
+  ]},
+  { iso: '2026-11-14', day: 'SAT', date: '14', items: [
+    { t: '09:00', s: 'Long run' },
+    { t: '15:00', s: 'Candida concert' },
+    { t: '16:00', s: 'Music Mundi 2026 concert' },
   ]},
 ]
 
